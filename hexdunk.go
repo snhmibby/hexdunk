@@ -175,8 +175,8 @@ func (h *HexViewWidget) clampAddr(a *int64) {
 	switch {
 	case *a < 0:
 		*a = 0
-	case *a > h.buffer.Size():
-		*a = h.buffer.Size()
+	case *a >= h.buffer.Size():
+		*a = h.buffer.Size() - 1
 	}
 }
 
