@@ -1,0 +1,2 @@
+A simple hex-editor widget for the Golang Fyne gui-toolkit.
+It uses the filebuf library for fast editing.
