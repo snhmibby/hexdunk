@@ -1,4 +1,4 @@
-package main
+package hexdunk
 
 import (
 	"os"
@@ -33,9 +33,35 @@ func menuFileQuit() {
 	os.Exit(0)
 }
 
-func menuEditCut()         {}
-func menuEditCopy()        {}
-func menuEditPaste()       {}
+func menuEditCut() {
+	hf := ActiveFile()
+	if hf != nil {
+		offs, size := HD.Tabs[HD.ActiveTab].view.Selection()
+		if size > 0 {
+			HD.ClipBoard = hf.buf.Cut(offs, size)
+		}
+	}
+}
+
+func menuEditCopy() {
+	hf := ActiveFile()
+	if hf != nil {
+		offs, size := HD.Tabs[HD.ActiveTab].view.Selection()
+		if size > 0 {
+			HD.ClipBoard = hf.buf.Copy(offs, size)
+		}
+	}
+}
+
+//paste in front cursor
+func menuEditPaste() {
+	hf := ActiveFile()
+	if HD.ClipBoard != nil && hf != nil {
+		offs := HD.Tabs[HD.ActiveTab].view.Cursor()
+		hf.buf.Paste(offs, HD.ClipBoard)
+	}
+}
+
 func menuEditPreferences() {}
 
 func mkMenuWidget() *G.MenuBarWidget {

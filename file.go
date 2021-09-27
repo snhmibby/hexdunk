@@ -1,4 +1,4 @@
-package main
+package hexdunk
 
 //(hex)file operations, opening/closing files, utility functions
 
@@ -24,7 +24,6 @@ func OpenHexFile(path string) (*HexFile, error) {
 		if err != nil {
 			return nil, mkErr("OpenHexFile", err)
 		}
-		//make hexfile struct
 		hf = new(HexFile)
 		hf.buf = buf
 		hf.name = path
@@ -35,14 +34,14 @@ func OpenHexFile(path string) (*HexFile, error) {
 	return hf, nil
 }
 
-//called when the last tab on this file is closed
+//should only called when the last view (tab) on this file is closed
 func CloseHexFile(path string) error {
 	hf, ok := HD.Files[path]
 	if !ok {
 		return mkErr("CloseHexFile", fmt.Errorf("No file named (%s) open.", path))
 	}
 	if hf.dirty {
-		//dialog.ReallyClose ? Option to save
+		//TODO: dialog.ReallyClose ? Option to save
 	}
 	delete(HD.Files, path)
 

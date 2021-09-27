@@ -1,4 +1,4 @@
-package main
+package hexdunk
 
 import (
 	G "github.com/AllenDang/giu"
@@ -22,6 +22,7 @@ var testfiles = []string{
 	"TODO",
 	"./README",
 	"NOSUCHFile",
+	"/",
 }
 
 func main() {
@@ -29,7 +30,7 @@ func main() {
 		OpenHexFile(n)
 	}
 
-	G.SetDefaultFont("DejavuSansMono.ttf", 12)
+	G.SetDefaultFont("DejavuSansMono.ttf", 14)
 	w := G.NewMasterWindow("HexDunk", 800, 800, 0)
 	w.Run(draw)
 }

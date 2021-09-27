@@ -48,9 +48,12 @@ type HexViewState struct {
 	selection int64
 }
 
-//implements: giu.Disposable
-func (st *HexViewState) Dispose() {
-	//nothing to do here
+func (view *HexViewState) Cursor() int64 {
+	return view.cursor
+}
+
+func (view *HexViewState) Selection() (addr, size int64) {
+	return view.cursor, view.selection
 }
 
 type HexViewWidget struct {

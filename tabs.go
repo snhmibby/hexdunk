@@ -1,9 +1,8 @@
-package main
+package hexdunk
 
 import (
 	"fmt"
 	H "hexdunk/widget"
-	hexdunk "hexdunk/widget"
 
 	G "github.com/AllenDang/giu"
 	I "github.com/AllenDang/imgui-go"
@@ -48,7 +47,7 @@ func ActiveFile() *HexFile {
 }
 
 func OpenTab(hf *HexFile) {
-	HD.Tabs = append(HD.Tabs, HexTab{name: hf.name, view: new(hexdunk.HexViewState)})
+	HD.Tabs = append(HD.Tabs, HexTab{name: hf.name, view: new(H.HexViewState)})
 }
 
 func CloseTab(t int) {
