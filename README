@@ -1,2 +1,2 @@
-A simple hex-editor widget for the Golang Fyne gui-toolkit.
-It uses the filebuf library for fast editing.
+A simple hex-editor (viewer, for now) widget using the giu library.
+It uses my filebuf library for fast editing.

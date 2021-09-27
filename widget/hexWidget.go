@@ -1,4 +1,6 @@
-package main
+package hexdunk
+
+//this kind of ripped is ripped from ocornuts' hexwidget (imgui_hex.cpp)
 
 //TODO: most hex dumps have a printable character view after the raw data, implement it
 //TODO: use timestamps to check to see if file is edited by another program
@@ -84,13 +86,13 @@ func (h *HexViewWidget) saveState() {
 func bytesPerLine(width, charwidth float32) int {
 	//to display 1 byte takes 4 characters: 2 for hexdump, 1 trailing space and 1 print
 	maxChars := int(width / (4 * charwidth))
-	return maxChars //TODO: round down to multiple of 8 or 16?
+	return maxChars //TODO: round down to multiple of 4, 8 or 16?
 }
 
 func (h *HexViewWidget) calcSizes() {
 	h.width, h.height = G.GetAvailableRegion()
 	//h.charWidth, h.charHeight = G.CalcTextSize("F")
-	//XXX somehow our calculation is off by a factor of 2 but i have no clue how...
+	//XXX somehow charWidth is off by a factor of 2...?????
 	h.charWidth, h.charHeight = G.CalcTextSize("")
 
 	size := h.buffer.Size()
@@ -125,15 +127,22 @@ func printByte(b byte) string {
 }
 
 func (h *HexViewWidget) Build() {
+	cursorBG := color.RGBA{R: 255, G: 100, B: 000, A: 255}
 	I.PushStyleVarVec2(I.StyleVarFramePadding, I.Vec2{X: 0, Y: 0})
 	I.PushStyleVarVec2(I.StyleVarItemSpacing, I.Vec2{X: 0, Y: 0})
 
 	h.calcSizes()
-	h.handleKeys() //should this be here?
+	h.handleKeys() //XXX should this be here or somewhere else??
 
 	buf, _ := h.buffer.ReadBuf(h.state.topAddr, h.bytesPerLine*h.linesPerScreen)
 	var found_eof = false
 	maxAddr := numHexDigits(h.buffer.Size()) //cached for printing
+
+	//startOffset is after address, where we start dumping bytes
+	startOffset, _ := G.CalcTextSize(addrLabel(0, maxAddr))
+	//printOffset is after the dumped hex bytes, where we have a column of printable characters
+	printOffset := startOffset + h.charWidth*float32(h.bytesPerLine)*3
+
 	for lnum := int64(0); lnum < h.linesPerScreen; lnum++ {
 		if found_eof {
 			break
@@ -144,29 +153,38 @@ func (h *HexViewWidget) Build() {
 		I.Text(addrLabel(lineAddr, maxAddr))
 
 		//hexdump 1 line
+		var cursorOff = -1
 		for addrOffset := int64(0); addrOffset < h.bytesPerLine; addrOffset++ {
-			I.SameLine()
+			I.SameLineV(startOffset+h.charWidth*float32(addrOffset*3), 0)
 			b, err := buf.ReadByte()
 			if err != nil {
 				found_eof = true
 				I.Text("   ")
 			} else {
-				lineStr += printByte(b)
-				hex := fmt.Sprintf("%02X ", b)
-				rect := image.Point{int(h.charWidth * 3), int(h.charHeight)}
 				isCursor := lineAddr+addrOffset == h.state.cursor.addr
 				if isCursor {
-					//just a red background for cursor for now
-					cursorBG := color.RGBA{R: 255, G: 100, B: 000, A: 255}
+					cursorOff = int(addrOffset)
+					//paint 2 background rectangles for the cursor,
+					//1 in the hex-view and 1 in the print-view
 					pos := G.GetCursorScreenPos()
-					can := G.GetCanvas()
-					can.AddRectFilled(pos, pos.Add(rect), cursorBG, 0, 0)
+					rect := image.Point{int(h.charWidth * 2.5), int(h.charHeight)}
+					G.GetCanvas().AddRectFilled(pos, pos.Add(rect), cursorBG, 0, 0)
 				}
+				hex := fmt.Sprintf("%02X ", b)
+				lineStr += printByte(b)
 				I.Text(hex)
 			}
 		}
-		I.SameLine()
-		I.Text(lineStr)
+		for i := range lineStr {
+			I.SameLineV(printOffset+h.charWidth*float32(i), 0)
+			if i == cursorOff {
+				//paint a background rectangle for the cursor
+				pos := G.GetCursorScreenPos()
+				rect := image.Point{int(h.charWidth), int(h.charHeight)}
+				G.GetCanvas().AddRectFilled(pos, pos.Add(rect), cursorBG, 0, 0)
+			}
+			I.Text(lineStr[i : i+1])
+		}
 	}
 	I.PopStyleVarV(2) //framepadding & itemspacing
 }
@@ -233,29 +251,4 @@ func (h *HexViewWidget) ScrollTo(addr int64) {
 	}
 	h.clampAddr(&h.state.topAddr)
 	h.saveState()
-}
-
-//for testing
-
-var fileName string
-var openBuffer *B.FileBuffer
-
-func draw() {
-	hv := HexView("hexview##1", openBuffer)
-	G.SingleWindow().Layout(
-		G.Label(fileName),
-		G.Child().Layout(hv),
-	)
-}
-
-func main() {
-	var err error
-	fileName = "go.mod"
-	openBuffer, err = B.NewFileBuffer(fileName)
-	if err != nil {
-		panic(err)
-	}
-	G.SetDefaultFont("DejavuSansMono.ttf", 11)
-	w := G.NewMasterWindow("HexViewer", 800, 600, 0)
-	w.Run(draw)
 }

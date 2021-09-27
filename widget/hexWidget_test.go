@@ -1,6 +1,8 @@
-package main
+package hexdunk
 
 import "testing"
+
+//actually, how to properly test a widget??
 
 type hdtest struct {
 	addr int64
