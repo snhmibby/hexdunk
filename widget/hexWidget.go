@@ -35,15 +35,17 @@ type TextColor struct {
 }
 
 type cursorAddr struct {
-	addr int64 //from start of file; byte address of the cursor
-	//which index of string rep of the data on this addr is the cursor?
-	idx int //only for insert mode
+	//byte address of cursor
+	addr int64
 }
 
 //Widget state
 type HexViewState struct {
-	topAddr int64
-	cursor  cursorAddr
+	//offset in the file where is the cursor (should be on screen?)
+	cursor int64
+
+	//selected bytes
+	selection int64
 }
 
 //implements: giu.Disposable
@@ -57,6 +59,7 @@ type HexViewWidget struct {
 	id     string
 	buffer *B.Buffer
 
+	topAddr         int64
 	bytesPerLine    int64
 	linesPerScreen  int64
 	width           float32
@@ -66,35 +69,29 @@ type HexViewWidget struct {
 	addressBarWidth float32
 }
 
-func HexView(id string, b *B.Buffer) *HexViewWidget {
+func HexView(id string, b *B.Buffer, st *HexViewState) *HexViewWidget {
 	h := &HexViewWidget{id: id, buffer: b}
-	st, ok := G.Context.GetState(id).(*HexViewState)
-	if ok {
-		h.state = st
-	} else {
-		h.state = &HexViewState{}
-	}
+	h.state = st
 	h.calcSizes()
 	h.saveState()
 	return h
 }
 
 func (h *HexViewWidget) saveState() {
-	G.Context.SetState(h.id, h.state)
 }
 
 //number of a bytes that fit in 1 line in the window width
 func bytesPerLine(width, charwidth float32) int {
 	//to display 1 byte takes 4 characters: 2 for hexdump, 1 trailing space and 1 print
 	maxChars := int(width / (4 * charwidth))
-	return maxChars //TODO: round down to multiple of 4, 8 or 16?
+	maxChars -= maxChars % 4
+	return maxChars
 }
 
 func (h *HexViewWidget) calcSizes() {
 	h.width, h.height = G.GetAvailableRegion()
-	//h.charWidth, h.charHeight = G.CalcTextSize("F")
-	//XXX somehow charWidth is off by a factor of 2...?????
-	h.charWidth, h.charHeight = G.CalcTextSize("")
+	sz := I.CalcTextSize("F", true, 0)
+	h.charWidth, h.charHeight = sz.X, sz.Y
 
 	size := h.buffer.Size()
 	nDigits := numHexDigits(size)
@@ -102,6 +99,14 @@ func (h *HexViewWidget) calcSizes() {
 
 	h.bytesPerLine = int64(bytesPerLine(h.width-h.addressBarWidth, h.charWidth))
 	h.linesPerScreen = int64(h.height / h.charHeight)
+
+	h.topAddr = int64(I.ScrollY()/h.charHeight) * h.bytesPerLine
+}
+
+func (h *HexViewWidget) onScreen(addr int64) bool {
+	top := int64(I.ScrollY()/h.charHeight) * h.bytesPerLine
+	fin := top + h.bytesPerLine*h.linesPerScreen
+	return addr > top && addr < fin
 }
 
 func (h *HexViewWidget) handleKeys() {
@@ -127,58 +132,77 @@ func printByte(b byte) string {
 	}
 }
 
-func (h *HexViewWidget) Build() {
+//TODO: use imgui columns?
+//Print the cursor to the widget
+func (h *HexViewWidget) printCursor(startOffset, printOffset float32) {
 	cursorBG := color.RGBA{R: 255, G: 100, B: 000, A: 255}
+
+	canvas := G.GetCanvas()
+	screenPos := G.GetCursorScreenPos()
+	cursor := h.state.cursor
+	cursorY := int((cursor / h.bytesPerLine) * int64(h.charHeight))
+
+	//cursor in hex dump
+	cursorX := int(startOffset) + int((cursor%h.bytesPerLine)*int64(3*h.charWidth))
+	pos := screenPos.Add(image.Pt(cursorX, cursorY))
+	rect := image.Pt(int(h.charWidth*2), int(h.charHeight))
+	canvas.AddRectFilled(pos, pos.Add(rect), cursorBG, 0, 0)
+
+	//cursor in string dump
+	cursorX = int(printOffset) + int((cursor%h.bytesPerLine)*int64(h.charWidth))
+	strPos := screenPos.Add(image.Pt(cursorX, cursorY))
+	strRect := image.Pt(int(h.charWidth), int(h.charHeight))
+	canvas.AddRectFilled(strPos, strPos.Add(strRect), cursorBG, 0, 0)
+}
+
+func (h *HexViewWidget) Build() {
+	selectBG := color.RGBA{R: 0, G: 0, B: 200, A: 255}
+	_ = selectBG
 	I.PushStyleVarVec2(I.StyleVarFramePadding, I.Vec2{X: 0, Y: 0})
 	I.PushStyleVarVec2(I.StyleVarItemSpacing, I.Vec2{X: 0, Y: 0})
 
-	child := G.Child().Layout(G.Custom(func() {
+	child := G.Child().Border(false).Layout(G.Custom(func() {
 		h.calcSizes()
 		h.handleKeys() //XXX should this be here or somewhere else??
 
 		/* the hexview has 3 columns, so to speak,
 		 * column 1 is the address, column 2 is a hexadecimal dump of bytes, column 3 is a readable string
+		 * TODO: Imgui has a provision for printing text in a column. use it.
+		 *
 		 */
 		maxAddr := numHexDigits(h.buffer.Size())                           //saved for printing address
 		startOffset, _ := G.CalcTextSize(addrLabel(0, maxAddr))            //x-position of column 2
 		printOffset := startOffset + h.charWidth*float32(h.bytesPerLine)*3 //x-position of column 3
 
-		numLines := (h.buffer.Size() + h.bytesPerLine - 1) / h.bytesPerLine //round up
-		lineBuffer := make([]byte, int(h.bytesPerLine))                     //buffer to read the bytes for 1 line
+		h.printCursor(startOffset, printOffset)
 
+		//print the hex dump using a listclipper
+		numLines := (h.buffer.Size() + h.bytesPerLine - 1) / h.bytesPerLine
+		lineBuffer := make([]byte, int(h.bytesPerLine)) //buffer to read the bytes for 1 line
 		var clip I.ListClipper
-		clip.Begin(int(numLines))
+		//dumb hack: do numlines + 10 because on big files, the last few lines get chopped off
+		//due to floating point errors in scrolling calculations
+		clip.BeginV(int(numLines+10), h.charHeight)
 		for clip.Step() {
 			for lnum := clip.DisplayStart; lnum < clip.DisplayEnd; lnum++ {
 				offs := int64(lnum) * h.bytesPerLine
 				h.buffer.Seek(offs, io.SeekStart)
-				n, _ := h.buffer.Read(lineBuffer)
-				fmt.Printf("line %d/%d @ %X, read %d bytes, len(lineBuf) = %d\n", lnum, numLines, offs, n, len(lineBuffer))
+				n, e := h.buffer.Read(lineBuffer)
+				if n < 0 || e != nil {
+					break
+				}
 
-				//print address (column 1)
+				//column 1, address
 				I.Text(addrLabel(offs, maxAddr))
 
-				//print hexdump (column 2)
+				//column2, hex dump
 				for i := 0; i < n; i++ {
 					I.SameLineV(startOffset+h.charWidth*float32(i)*3, 0)
-					addr := offs + int64(i)
-					if addr == h.state.cursor.addr {
-						canvas := G.GetCanvas()
-
-						//cursor shows in hex dump
-						pos := G.GetCursorScreenPos()
-						rect := image.Point{int(h.charWidth * 3), int(h.charHeight)}
-						canvas.AddRectFilled(pos, pos.Add(rect), cursorBG, 0, 0)
-
-						//cursor shows in string dump
-						strPos := image.Point{X: 1 + int(printOffset) + int(h.charWidth)*(i+1), Y: pos.Y}
-						strRect := image.Point{X: int(h.charWidth), Y: int(h.charHeight)}
-						canvas.AddRectFilled(strPos, strPos.Add(strRect), cursorBG, 0, 0)
-					}
 					hex := fmt.Sprintf("%02X ", lineBuffer[i])
 					I.Text(hex)
 				}
-				//print readable string
+
+				//column3, readable string
 				for i := 0; i < n; i++ {
 					if !unicode.IsGraphic(rune(lineBuffer[i])) {
 						lineBuffer[i] = '.'
@@ -206,56 +230,48 @@ func (h *HexViewWidget) clampAddr(a *int64) {
 }
 
 func (h *HexViewWidget) MoveRight() {
-	h.state.cursor.addr += 1
-	h.state.cursor.idx = 0
+	h.state.cursor += 1
 	h.finishMove()
 }
 
 func (h *HexViewWidget) MoveLeft() {
-	h.state.cursor.addr -= 1
-	h.state.cursor.idx = 0
+	h.state.cursor -= 1
 	h.finishMove()
 }
 
 func (h *HexViewWidget) MoveDown() {
-	h.state.cursor.addr += h.bytesPerLine
-	h.state.cursor.idx = 0
+	h.state.cursor += h.bytesPerLine
 	h.finishMove()
 }
 
 func (h *HexViewWidget) MoveUp() {
-	h.state.cursor.addr -= h.bytesPerLine
-	h.state.cursor.idx = 0
+	h.state.cursor -= h.bytesPerLine
 	h.finishMove()
 }
 
 func (h *HexViewWidget) finishMove() {
-	h.clampAddr(&h.state.cursor.addr)
-	/* TODO
-	if h.state.cursor.addr is outside view {
-		h.ScrollTo(h.state.cursor.addr)
-	}
-	*/
+	h.clampAddr(&h.state.cursor)
+	h.ScrollTo(h.state.cursor)
 	h.saveState()
 }
 
 func (h *HexViewWidget) ScrollTo(addr int64) {
 	bpl := h.bytesPerLine
-	h.state.cursor.addr = addr
-	h.clampAddr(&h.state.cursor.addr)
+	top := int64(I.ScrollY()/h.charHeight) * bpl
 	switch {
-	case h.state.cursor.addr < h.state.topAddr:
+	case h.state.cursor < top:
 		//scroll up, addr should be in the first line
 		//make first line the one that contains addr
-		h.state.topAddr = (h.state.cursor.addr / bpl) * bpl
+		top = (h.state.cursor / bpl) * bpl
 
-	case h.state.cursor.addr > h.state.topAddr+bpl*h.linesPerScreen:
+	case h.state.cursor > top+bpl*h.linesPerScreen:
 		//scroll down, addr should be in the last line
-		a := h.state.cursor.addr - h.linesPerScreen*bpl
-		h.state.topAddr = ((a + bpl - 1) / bpl) * bpl
+		a := h.state.cursor - h.linesPerScreen*bpl
+		top = ((a + bpl - 1) / bpl) * bpl
 	default:
 		//addr is already on screen
 	}
-	h.clampAddr(&h.state.topAddr)
+	h.clampAddr(&top)
+	I.SetScrollY(float32(top/bpl) * h.charHeight)
 	h.saveState()
 }
