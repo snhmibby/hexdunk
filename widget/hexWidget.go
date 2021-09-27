@@ -132,67 +132,67 @@ func (h *HexViewWidget) Build() {
 	I.PushStyleVarVec2(I.StyleVarFramePadding, I.Vec2{X: 0, Y: 0})
 	I.PushStyleVarVec2(I.StyleVarItemSpacing, I.Vec2{X: 0, Y: 0})
 
-	h.calcSizes()
-	h.handleKeys() //XXX should this be here or somewhere else??
+	child := G.Child().Layout(G.Custom(func() {
+		h.calcSizes()
+		h.handleKeys() //XXX should this be here or somewhere else??
 
-	screenBytes := h.bytesPerLine * h.linesPerScreen
-	screenBuffer := make([]byte, screenBytes)
-	h.buffer.Seek(h.state.topAddr, io.SeekStart)
-	nbytes, _ := h.buffer.Read(screenBuffer)
+		/* the hexview has 3 columns, so to speak,
+		 * column 1 is the address, column 2 is a hexadecimal dump of bytes, column 3 is a readable string
+		 */
+		maxAddr := numHexDigits(h.buffer.Size())                           //saved for printing address
+		startOffset, _ := G.CalcTextSize(addrLabel(0, maxAddr))            //x-position of column 2
+		printOffset := startOffset + h.charWidth*float32(h.bytesPerLine)*3 //x-position of column 3
 
-	var found_eof = false
-	maxAddr := numHexDigits(h.buffer.Size()) //cached for printing
+		numLines := (h.buffer.Size() + h.bytesPerLine - 1) / h.bytesPerLine //round up
+		lineBuffer := make([]byte, int(h.bytesPerLine))                     //buffer to read the bytes for 1 line
 
-	//startOffset is after address, where we start dumping bytes
-	startOffset, _ := G.CalcTextSize(addrLabel(0, maxAddr))
-	//printOffset is after the dumped hex bytes, where we have a column of printable characters
-	printOffset := startOffset + h.charWidth*float32(h.bytesPerLine)*3
+		var clip I.ListClipper
+		clip.Begin(int(numLines))
+		for clip.Step() {
+			for lnum := clip.DisplayStart; lnum < clip.DisplayEnd; lnum++ {
+				offs := int64(lnum) * h.bytesPerLine
+				h.buffer.Seek(offs, io.SeekStart)
+				n, _ := h.buffer.Read(lineBuffer)
+				fmt.Printf("line %d/%d @ %X, read %d bytes, len(lineBuf) = %d\n", lnum, numLines, offs, n, len(lineBuffer))
 
-	numLines := (int64(nbytes) + h.bytesPerLine - 1) / h.bytesPerLine
-	for lnum := int64(0); lnum < numLines; lnum++ {
-		if found_eof {
-			break
-		}
-		lineStr := ""
-		lineAddr := h.state.topAddr + lnum*h.bytesPerLine
-		//TODO: colors? color addr if cursor on this line?
-		I.Text(addrLabel(lineAddr, maxAddr))
+				//print address (column 1)
+				I.Text(addrLabel(offs, maxAddr))
 
-		//hexdump 1 line
-		var cursorOff = -1
-		for addrOffset := int64(0); addrOffset < h.bytesPerLine; addrOffset++ {
-			n := lnum*h.bytesPerLine + addrOffset
-			I.SameLineV(startOffset+h.charWidth*float32(addrOffset*3), 0)
-			if n >= int64(nbytes) {
-				found_eof = true
-				break
-			} else {
-				b := screenBuffer[n]
-				isCursor := lineAddr+addrOffset == h.state.cursor.addr
-				if isCursor {
-					cursorOff = int(addrOffset)
-					//paint 2 background rectangles for the cursor,
-					//1 in the hex-view and 1 in the print-view
-					pos := G.GetCursorScreenPos()
-					rect := image.Point{int(h.charWidth * 2.5), int(h.charHeight)}
-					G.GetCanvas().AddRectFilled(pos, pos.Add(rect), cursorBG, 0, 0)
+				//print hexdump (column 2)
+				for i := 0; i < n; i++ {
+					I.SameLineV(startOffset+h.charWidth*float32(i)*3, 0)
+					addr := offs + int64(i)
+					if addr == h.state.cursor.addr {
+						canvas := G.GetCanvas()
+
+						//cursor shows in hex dump
+						pos := G.GetCursorScreenPos()
+						rect := image.Point{int(h.charWidth * 3), int(h.charHeight)}
+						canvas.AddRectFilled(pos, pos.Add(rect), cursorBG, 0, 0)
+
+						//cursor shows in string dump
+						strPos := image.Point{X: 1 + int(printOffset) + int(h.charWidth)*(i+1), Y: pos.Y}
+						strRect := image.Point{X: int(h.charWidth), Y: int(h.charHeight)}
+						canvas.AddRectFilled(strPos, strPos.Add(strRect), cursorBG, 0, 0)
+					}
+					hex := fmt.Sprintf("%02X ", lineBuffer[i])
+					I.Text(hex)
 				}
-				hex := fmt.Sprintf("%02X ", b)
-				lineStr += printByte(b)
-				I.Text(hex)
+				//print readable string
+				for i := 0; i < n; i++ {
+					if !unicode.IsGraphic(rune(lineBuffer[i])) {
+						lineBuffer[i] = '.'
+					}
+					I.SameLineV(printOffset+float32(i)*h.charWidth, 0)
+					I.Text(string(lineBuffer[i : i+1]))
+				}
 			}
 		}
-		for i := range lineStr {
-			I.SameLineV(printOffset+h.charWidth*float32(i), 0)
-			if i == cursorOff {
-				//paint a background rectangle for the cursor
-				pos := G.GetCursorScreenPos()
-				rect := image.Point{int(h.charWidth), int(h.charHeight)}
-				G.GetCanvas().AddRectFilled(pos, pos.Add(rect), cursorBG, 0, 0)
-			}
-			I.Text(lineStr[i : i+1])
-		}
-	}
+		clip.End()
+	}))
+
+	child.Build()
+
 	I.PopStyleVarV(2) //framepadding & itemspacing
 }
 
