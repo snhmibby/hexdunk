@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"io"
 	"unicode"
 
 	G "github.com/AllenDang/giu"
@@ -54,7 +55,7 @@ type HexViewWidget struct {
 	state *HexViewState
 
 	id     string
-	buffer *B.FileBuffer
+	buffer *B.Buffer
 
 	bytesPerLine    int64
 	linesPerScreen  int64
@@ -65,7 +66,7 @@ type HexViewWidget struct {
 	addressBarWidth float32
 }
 
-func HexView(id string, b *B.FileBuffer) *HexViewWidget {
+func HexView(id string, b *B.Buffer) *HexViewWidget {
 	h := &HexViewWidget{id: id, buffer: b}
 	st, ok := G.Context.GetState(id).(*HexViewState)
 	if ok {
@@ -134,7 +135,11 @@ func (h *HexViewWidget) Build() {
 	h.calcSizes()
 	h.handleKeys() //XXX should this be here or somewhere else??
 
-	buf, _ := h.buffer.ReadBuf(h.state.topAddr, h.bytesPerLine*h.linesPerScreen)
+	screenBytes := h.bytesPerLine * h.linesPerScreen
+	screenBuffer := make([]byte, screenBytes)
+	h.buffer.Seek(h.state.topAddr, io.SeekStart)
+	nbytes, _ := h.buffer.Read(screenBuffer)
+
 	var found_eof = false
 	maxAddr := numHexDigits(h.buffer.Size()) //cached for printing
 
@@ -143,7 +148,8 @@ func (h *HexViewWidget) Build() {
 	//printOffset is after the dumped hex bytes, where we have a column of printable characters
 	printOffset := startOffset + h.charWidth*float32(h.bytesPerLine)*3
 
-	for lnum := int64(0); lnum < h.linesPerScreen; lnum++ {
+	numLines := (int64(nbytes) + h.bytesPerLine - 1) / h.bytesPerLine
+	for lnum := int64(0); lnum < numLines; lnum++ {
 		if found_eof {
 			break
 		}
@@ -155,12 +161,13 @@ func (h *HexViewWidget) Build() {
 		//hexdump 1 line
 		var cursorOff = -1
 		for addrOffset := int64(0); addrOffset < h.bytesPerLine; addrOffset++ {
+			n := lnum*h.bytesPerLine + addrOffset
 			I.SameLineV(startOffset+h.charWidth*float32(addrOffset*3), 0)
-			b, err := buf.ReadByte()
-			if err != nil {
+			if n >= int64(nbytes) {
 				found_eof = true
-				I.Text("   ")
+				break
 			} else {
+				b := screenBuffer[n]
 				isCursor := lineAddr+addrOffset == h.state.cursor.addr
 				if isCursor {
 					cursorOff = int(addrOffset)

@@ -1,8 +1,11 @@
 - Figure out how to respond to mousedown and dragging (update selection) in giu
+- How to make scrollbars in Giu?
+  I don't want to load the entire file so they have to work programmatically
 - Add a (working) menu
 - Add a toolbar
 - How to do dynamic loading in Go? I.e. a standard plugin system would load a dll, then
   the dll could register itself with the program in the 'init' function.
+  there is the 'plugin' package in the standard library. Problem solved. (doesn't work on windows)
 - Figure out how to handle keys *properly* (i.e. does widget have focus or something)
 - Calculating the characters/bytes per line is off by a factor 2, but i don't find any bugs.
   Maybe there is something wrong with my assumptions about calctextsize or the imgui theme padding?

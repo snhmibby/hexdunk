@@ -12,7 +12,7 @@ import (
 
 type openFile struct {
 	name string
-	buf  *B.FileBuffer
+	buf  *B.Buffer
 }
 
 var Tabs []openFile
@@ -61,7 +61,7 @@ var testfiles = []string{
 
 func main() {
 	for _, n := range testfiles {
-		buf, err := B.NewFileBuffer(n)
+		buf, err := B.OpenFile(n)
 		if err != nil {
 			log.Fatal(n, err)
 		}
