@@ -1,4 +1,4 @@
-package hexdunk
+package main
 
 import (
 	"os"
@@ -62,7 +62,11 @@ func menuEditPaste() {
 	}
 }
 
-func menuEditPreferences() {}
+func menuEditPreferences() {
+	//TODO
+}
+
+var testBool bool
 
 func mkMenuWidget() *G.MenuBarWidget {
 	return G.MenuBar().Layout(
@@ -81,9 +85,22 @@ func mkMenuWidget() *G.MenuBarWidget {
 			G.MenuItem("Copy").OnClick(menuEditCopy),
 			G.MenuItem("Paste").OnClick(menuEditPaste),
 			G.Separator(),
-			G.MenuItem("Preferences").OnClick(menuEditPreferences),
+			G.MenuItem("Settings").OnClick(menuEditPreferences),
 		),
-		G.Menu("View").Layout(),
-		G.Menu("Plugin").Layout(),
+		G.Menu("View").Layout(
+			G.MenuItem("Search/Replace"),
+		),
+		G.Menu("Plugin").Layout(
+			G.MenuItem("Load"),
+			G.Separator(),
+			G.Menu("Plugin Foo").Layout(
+				G.MenuItem("DoBar"),
+				G.MenuItem("DoBaz"),
+				G.MenuItem("Quux"),
+				G.Separator(),
+				G.Checkbox("Activate/Deactivate)", &testBool),
+				G.MenuItem("Settings"),
+			),
+		),
 	)
 }

@@ -1,4 +1,4 @@
-package hexdunk
+package main
 
 //(hex)file operations, opening/closing files, utility functions
 
@@ -45,8 +45,7 @@ func CloseHexFile(path string) error {
 	}
 	delete(HD.Files, path)
 
-	//delete all opened tabs also
-	//have to go from biggest number to bottom in deletion order
+	//sanity check
 	for _, t := range HD.Tabs {
 		if t.name == path {
 			panic("shouldn't happen")

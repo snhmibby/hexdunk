@@ -1,4 +1,4 @@
-package hexdunk
+package main
 
 import (
 	G "github.com/AllenDang/giu"
@@ -21,8 +21,6 @@ var testfiles = []string{
 	"/home/jurjen/movies/films/Puss in Boots[2011]BRRip XviD-ETRG/Puss in Boots[2011]BRRip XviD-ETRG.avi",
 	"TODO",
 	"./README",
-	"NOSUCHFile",
-	"/",
 }
 
 func main() {

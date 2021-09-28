@@ -1,4 +1,4 @@
-package hexdunk
+package main
 
 //global variables and definitions
 
