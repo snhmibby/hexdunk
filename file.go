@@ -15,7 +15,7 @@ func OpenHexFile(path string) (*HexFile, error) {
 		//open & stat file
 		stats, err := os.Stat(path)
 		if err != nil {
-			return nil, mkErr("OpenFile", err)
+			return nil, mkErr("OpenHexFile", err)
 		}
 		if !stats.Mode().IsRegular() {
 			return nil, mkErr("OpenHexFile", fmt.Errorf("%s is not a regular file", path))

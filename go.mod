@@ -3,8 +3,8 @@ module hexdunk
 go 1.17
 
 require (
-	github.com/AllenDang/giu v0.5.7-0.20210927081311-2a792dae8138
-	github.com/AllenDang/imgui-go v1.12.1-0.20210927080912-46269bd8d896
+	github.com/AllenDang/giu v0.5.7-0.20210929101140-50bb71316c51
+	github.com/AllenDang/imgui-go v1.12.1-0.20210929095526-68b309906bdc
 	github.com/snhmibby/filebuf v0.0.0-20210924193811-90683552269d
 )
 

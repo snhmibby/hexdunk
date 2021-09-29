@@ -44,7 +44,7 @@ type HexViewState struct {
 	//offset in the file where is the cursor (should be on screen?)
 	cursor int64
 
-	//selected bytes
+	//selected bytes (offset from cursor)
 	selection int64
 }
 
@@ -158,6 +158,57 @@ func (h *HexViewWidget) printCursor(startOffset, printOffset float32) {
 	canvas.AddRectFilled(strPos, strPos.Add(strRect), cursorBG, 0, 0)
 }
 
+func (h *HexViewWidget) inSelection(addr int64) bool {
+	off, size := h.state.Selection()
+	return addr >= off && addr < off+size
+}
+
+func (h *HexViewWidget) printSelectionBG(addr int64) {
+	selectionBG := color.RGBA{B: 200, A: 200}
+	canvas := G.GetCanvas()
+	pos := G.GetCursorScreenPos()
+
+	sz := 3
+	if (addr+1)%h.bytesPerLine == 0 {
+		sz = 2
+	}
+
+	rect := image.Pt(int(h.charWidth)*sz, int(h.charHeight))
+	canvas.AddRectFilled(pos, pos.Add(rect), selectionBG, 0, 0)
+}
+
+//to be called from Build() function, prints hexdump of byte and handles keyclicks and such
+func (h *HexViewWidget) BuildHexCell(addr int64, b byte) {
+
+	//print selection bg first
+	if h.inSelection(addr) {
+		h.printSelectionBG(addr)
+	}
+
+	//print hexdump
+	hex := fmt.Sprintf("%02X ", b)
+	I.Text(hex)
+
+	//handle click events
+	ev := G.Event().OnClick(G.MouseButtonLeft, func() {
+		h.state.cursor = addr
+		h.state.selection = 0
+	}).OnClick(G.MouseButtonRight, func() {
+		//adjust selection
+		off := h.state.cursor
+		switch {
+		case addr < h.state.cursor:
+			h.state.cursor = addr
+			h.state.selection += off - addr + 1
+		default:
+			h.state.selection = addr - off + 1
+		}
+	}).OnHover(func() {
+		//TODO: maybe print some info i.e. interpretation of different types starting at addr
+	})
+	ev.Build()
+}
+
 func (h *HexViewWidget) Build() {
 	selectBG := color.RGBA{R: 0, G: 0, B: 200, A: 255}
 	_ = selectBG
@@ -201,8 +252,8 @@ func (h *HexViewWidget) Build() {
 				//column2, hex dump
 				for i := 0; i < n; i++ {
 					I.SameLineV(startOffset+h.charWidth*float32(i)*3, 0)
-					hex := fmt.Sprintf("%02X ", lineBuffer[i])
-					I.Text(hex)
+					//I.Text(hex)
+					h.BuildHexCell(int64(lnum)*h.bytesPerLine+int64(i), lineBuffer[i])
 				}
 
 				//column3, readable string
@@ -253,6 +304,7 @@ func (h *HexViewWidget) MoveUp() {
 }
 
 func (h *HexViewWidget) finishMove() {
+	h.state.selection = 0
 	h.clampAddr(&h.state.cursor)
 	h.ScrollTo(h.state.cursor)
 	h.saveState()
