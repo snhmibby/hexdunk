@@ -46,10 +46,18 @@ type HexViewState struct {
 
 	//selected bytes (offset from cursor)
 	selection int64
+
+	//selection dragging
+	dragging  bool
+	lastmouse int64
 }
 
 func (view *HexViewState) Cursor() int64 {
 	return view.cursor
+}
+
+func (view *HexViewState) SetSelection(addr, size int64) {
+	view.cursor, view.selection = addr, size
 }
 
 func (view *HexViewState) Selection() (addr, size int64) {
@@ -107,7 +115,7 @@ func (h *HexViewWidget) calcSizes() {
 }
 
 func (h *HexViewWidget) onScreen(addr int64) bool {
-	top := int64(I.ScrollY()/h.charHeight) * h.bytesPerLine
+	top := h.topAddr
 	fin := top + h.bytesPerLine*h.linesPerScreen
 	return addr > top && addr < fin
 }
@@ -177,6 +185,27 @@ func (h *HexViewWidget) printSelectionBG(addr int64) {
 	canvas.AddRectFilled(pos, pos.Add(rect), selectionBG, 0, 0)
 }
 
+func (h *HexViewWidget) updateSelection(addr int64) {
+	//adjust selection
+	off := h.state.cursor
+	switch {
+	case addr < h.state.cursor:
+		h.state.cursor = addr
+		if h.state.dragging {
+			h.state.selection += off - addr
+		} else {
+			h.state.selection += off - addr + 1
+		}
+	default:
+		h.state.selection = addr - off + 1
+	}
+
+	//We allow EOF to be a selectable/editable field and such, chomp it here
+	if h.inSelection(h.buffer.Size()) {
+		h.state.selection--
+	}
+}
+
 //to be called from Build() function, prints hexdump of byte and handles keyclicks and such
 func (h *HexViewWidget) BuildHexCell(addr int64, b byte) {
 
@@ -185,28 +214,35 @@ func (h *HexViewWidget) BuildHexCell(addr int64, b byte) {
 		h.printSelectionBG(addr)
 	}
 
-	//print hexdump
-	hex := fmt.Sprintf("%02X ", b)
+	var hex string
+	if addr == h.buffer.Size() {
+		hex = "   "
+	} else {
+		hex = fmt.Sprintf("%02X ", b)
+	}
 	I.Text(hex)
 
 	//handle click events
-	ev := G.Event().OnClick(G.MouseButtonLeft, func() {
-		h.state.cursor = addr
-		h.state.selection = 0
-	}).OnClick(G.MouseButtonRight, func() {
-		//adjust selection
-		off := h.state.cursor
-		switch {
-		case addr < h.state.cursor:
+	G.Event().OnClick(G.MouseButtonRight, func() {
+		h.updateSelection(addr)
+	}).OnMouseDown(G.MouseButtonLeft, func() {
+		h.state.lastmouse = addr
+		if !h.state.dragging {
 			h.state.cursor = addr
-			h.state.selection += off - addr + 1
-		default:
-			h.state.selection = addr - off + 1
+			h.state.selection = 0
+			h.state.dragging = true
+		}
+	}).OnMouseReleased(G.MouseButtonLeft, func() {
+		h.state.dragging = false
+		if addr != h.state.lastmouse {
+			h.updateSelection(addr)
 		}
 	}).OnHover(func() {
 		//TODO: maybe print some info i.e. interpretation of different types starting at addr
-	})
-	ev.Build()
+		if h.state.dragging && addr != h.state.lastmouse {
+			h.updateSelection(addr)
+		}
+	}).Build()
 }
 
 func (h *HexViewWidget) Build() {
@@ -254,6 +290,11 @@ func (h *HexViewWidget) Build() {
 					I.SameLineV(startOffset+h.charWidth*float32(i)*3, 0)
 					//I.Text(hex)
 					h.BuildHexCell(int64(lnum)*h.bytesPerLine+int64(i), lineBuffer[i])
+				}
+				//allow to select EOF
+				if n != int(h.bytesPerLine) {
+					I.SameLineV(startOffset+h.charWidth*float32(n)*3, 0)
+					h.BuildHexCell(h.buffer.Size(), 0)
 				}
 
 				//column3, readable string
@@ -312,7 +353,7 @@ func (h *HexViewWidget) finishMove() {
 
 func (h *HexViewWidget) ScrollTo(addr int64) {
 	bpl := h.bytesPerLine
-	top := int64(I.ScrollY()/h.charHeight) * bpl
+	top := h.topAddr
 	switch {
 	case h.state.cursor < top:
 		//scroll up, addr should be in the first line

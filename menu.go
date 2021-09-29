@@ -33,20 +33,24 @@ func menuFileQuit() {
 	os.Exit(0)
 }
 
+//XXX TODO: these should do more error (size/offset, among others) checks!
 func menuEditCut() {
-	hf := ActiveFile()
-	if hf != nil {
-		offs, size := HD.Tabs[HD.ActiveTab].view.Selection()
+	file := ActiveFile()
+	tab := ActiveTab()
+	if file != nil {
+		offs, size := tab.view.Selection()
 		if size > 0 {
-			HD.ClipBoard = hf.buf.Cut(offs, size)
+			HD.ClipBoard = file.buf.Cut(offs, size)
+			tab.view.SetSelection(offs, 0)
 		}
 	}
 }
 
 func menuEditCopy() {
 	hf := ActiveFile()
+	tab := ActiveTab()
 	if hf != nil {
-		offs, size := HD.Tabs[HD.ActiveTab].view.Selection()
+		offs, size := tab.view.Selection()
 		if size > 0 {
 			HD.ClipBoard = hf.buf.Copy(offs, size)
 		}
@@ -56,8 +60,9 @@ func menuEditCopy() {
 //paste in front cursor
 func menuEditPaste() {
 	hf := ActiveFile()
+	tab := ActiveTab()
 	if HD.ClipBoard != nil && hf != nil {
-		offs := HD.Tabs[HD.ActiveTab].view.Cursor()
+		offs := tab.view.Cursor()
 		hf.buf.Paste(offs, HD.ClipBoard)
 	}
 }

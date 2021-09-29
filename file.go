@@ -17,6 +17,7 @@ func OpenHexFile(path string) (*HexFile, error) {
 		if err != nil {
 			return nil, mkErr("OpenHexFile", err)
 		}
+		//XXX this check shouldn't even be here - we want to be able to edit ANY file
 		if !stats.Mode().IsRegular() {
 			return nil, mkErr("OpenHexFile", fmt.Errorf("%s is not a regular file", path))
 		}
