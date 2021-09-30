@@ -5,8 +5,9 @@ import (
 )
 
 func draw() {
+
 	G.SingleWindowWithMenuBar().Layout(
-		mkMenuWidget(),
+		mkMenu(),
 		//makeToolBar(),
 		mkTabWidget(),
 	)

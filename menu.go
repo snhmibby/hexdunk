@@ -73,7 +73,7 @@ func menuEditPreferences() {
 
 var testBool bool
 
-func mkMenuWidget() *G.MenuBarWidget {
+func mkMenu() *G.MenuBarWidget {
 	return G.MenuBar().Layout(
 		G.Menu("File").Layout(
 			G.MenuItem("New").OnClick(menuFileNew),

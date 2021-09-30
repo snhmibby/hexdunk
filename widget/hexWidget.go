@@ -1,10 +1,5 @@
 package hexdunk
 
-//this kind of ripped is ripped from ocornuts' hexwidget (imgui_hex.cpp)
-
-//TODO: most hex dumps have a printable character view after the raw data, implement it
-//TODO: use timestamps to check to see if file is edited by another program
-
 import (
 	"fmt"
 	"image"
@@ -39,7 +34,6 @@ type cursorAddr struct {
 	addr int64
 }
 
-//Widget state
 type HexViewState struct {
 	//offset in the file where is the cursor (should be on screen?)
 	cursor int64
@@ -91,7 +85,6 @@ func HexView(id string, b *B.Buffer, st *HexViewState) *HexViewWidget {
 func (h *HexViewWidget) saveState() {
 }
 
-//number of a bytes that fit in 1 line in the window width
 func bytesPerLine(width, charwidth float32) int {
 	//to display 1 byte takes 4 characters: 2 for hexdump, 1 trailing space and 1 print
 	maxChars := int(width / (4 * charwidth))
@@ -172,53 +165,33 @@ func (h *HexViewWidget) updateSelection(addr int64) {
 	}
 }
 
-func (h *HexViewWidget) printStrBG(addr int64) {
+func (h *HexViewWidget) printBG(addr int64, cursorw, selectw int) {
 	canvas := G.GetCanvas()
 	pos := G.GetCursorScreenPos()
 
 	if addr == h.state.cursor {
 		cursorBG := color.RGBA{R: 255, G: 100, B: 000, A: 255}
-		rect := image.Pt(int(h.charWidth), int(h.charHeight))
+		rect := image.Pt(cursorw*int(h.charWidth), int(h.charHeight))
 		canvas.AddRectFilled(pos, pos.Add(rect), cursorBG, 0, 0)
 	}
 
 	if h.inSelection(addr) {
 		selectionBG := color.RGBA{B: 200, A: 100}
-		rect := image.Pt(int(h.charWidth), int(h.charHeight))
+		rect := image.Pt(selectw*int(h.charWidth), int(h.charHeight))
 		canvas.AddRectFilled(pos, pos.Add(rect), selectionBG, 0, 0)
 	}
 }
 
-func (h *HexViewWidget) printHexBG(addr int64) {
-	canvas := G.GetCanvas()
-	pos := G.GetCursorScreenPos()
-
-	if addr == h.state.cursor {
-		cursorBG := color.RGBA{R: 255, G: 100, B: 000, A: 255}
-		rect := image.Pt(int(h.charWidth*2), int(h.charHeight))
-		canvas.AddRectFilled(pos, pos.Add(rect), cursorBG, 0, 0)
-	}
-
-	if h.inSelection(addr) {
-		selectionBG := color.RGBA{B: 200, A: 100}
-		sz := 3
-		if (addr+1)%h.bytesPerLine == 0 {
-			sz = 2
-		}
-		rect := image.Pt(int(h.charWidth)*sz, int(h.charHeight))
-		canvas.AddRectFilled(pos, pos.Add(rect), selectionBG, 0, 0)
-	}
-}
-
+//a cell is a piece of text that corresponds to an file-offset.
+//it can be clicked and dragged
 func (h *HexViewWidget) BuildCell(addr int64, txt string) {
 	if len(txt) == 1 {
-		h.printStrBG(addr)
+		h.printBG(addr, 1, 1)
 	} else {
-		h.printHexBG(addr)
+		h.printBG(addr, 2, 3)
 	}
 	I.Text(txt)
 
-	//handle click events
 	G.Event().OnClick(G.MouseButtonRight, func() {
 		h.updateSelection(addr)
 	}).OnMouseDown(G.MouseButtonLeft, func() {
