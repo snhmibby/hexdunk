@@ -1,8 +1,0 @@
-A hex-editor (viewer, for now).
-- Lightning fast loading of files
-- Supports fast cut/copy/paste
-- Look good
-- Has plugins
-- Written in Go
-
-Unfortunately, it's not finished yet.
