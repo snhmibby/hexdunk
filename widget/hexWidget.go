@@ -171,18 +171,27 @@ func (h *HexViewWidget) inSelection(addr int64) bool {
 	return addr >= off && addr < off+size
 }
 
-func (h *HexViewWidget) printSelectionBG(addr int64) {
-	selectionBG := color.RGBA{B: 200, A: 200}
+func (h *HexViewWidget) printHexBG(addr int64) {
 	canvas := G.GetCanvas()
 	pos := G.GetCursorScreenPos()
 
-	sz := 3
-	if (addr+1)%h.bytesPerLine == 0 {
-		sz = 2
+	//print cursor
+	if addr == h.state.cursor {
+		cursorBG := color.RGBA{R: 255, G: 100, B: 000, A: 255}
+		rect := image.Pt(int(h.charWidth*3), int(h.charHeight))
+		canvas.AddRectFilled(pos, pos.Add(rect), cursorBG, 0, 0)
 	}
 
-	rect := image.Pt(int(h.charWidth)*sz, int(h.charHeight))
-	canvas.AddRectFilled(pos, pos.Add(rect), selectionBG, 0, 0)
+	//print selection
+	if h.inSelection(addr) {
+		selectionBG := color.RGBA{B: 200, A: 200}
+		sz := 3
+		if (addr+1)%h.bytesPerLine == 0 {
+			sz = 2
+		}
+		rect := image.Pt(int(h.charWidth)*sz, int(h.charHeight))
+		canvas.AddRectFilled(pos, pos.Add(rect), selectionBG, 0, 0)
+	}
 }
 
 func (h *HexViewWidget) updateSelection(addr int64) {
@@ -208,18 +217,13 @@ func (h *HexViewWidget) updateSelection(addr int64) {
 
 //to be called from Build() function, prints hexdump of byte and handles keyclicks and such
 func (h *HexViewWidget) BuildHexCell(addr int64, b byte) {
-
-	//print selection bg first
-	if h.inSelection(addr) {
-		h.printSelectionBG(addr)
-	}
-
 	var hex string
 	if addr == h.buffer.Size() {
 		hex = "   "
 	} else {
 		hex = fmt.Sprintf("%02X ", b)
 	}
+	h.printHexBG(addr)
 	I.Text(hex)
 
 	//handle click events
@@ -246,8 +250,6 @@ func (h *HexViewWidget) BuildHexCell(addr int64, b byte) {
 }
 
 func (h *HexViewWidget) Build() {
-	selectBG := color.RGBA{R: 0, G: 0, B: 200, A: 255}
-	_ = selectBG
 	I.PushStyleVarVec2(I.StyleVarFramePadding, I.Vec2{X: 0, Y: 0})
 	I.PushStyleVarVec2(I.StyleVarItemSpacing, I.Vec2{X: 0, Y: 0})
 
@@ -264,7 +266,7 @@ func (h *HexViewWidget) Build() {
 		startOffset, _ := G.CalcTextSize(addrLabel(0, maxAddr))            //x-position of column 2
 		printOffset := startOffset + h.charWidth*float32(h.bytesPerLine)*3 //x-position of column 3
 
-		h.printCursor(startOffset, printOffset)
+		//h.printCursor(startOffset, printOffset)
 
 		//print the hex dump using a listclipper
 		numLines := (h.buffer.Size() + h.bytesPerLine - 1) / h.bytesPerLine
@@ -275,10 +277,14 @@ func (h *HexViewWidget) Build() {
 		clip.BeginV(int(numLines+10), h.charHeight)
 		for clip.Step() {
 			for lnum := clip.DisplayStart; lnum < clip.DisplayEnd; lnum++ {
+				//read data for this line
 				offs := int64(lnum) * h.bytesPerLine
 				h.buffer.Seek(offs, io.SeekStart)
 				n, e := h.buffer.Read(lineBuffer)
-				if n < 0 || e != nil {
+				if e != nil {
+					panic(e)
+				}
+				if n < 0 {
 					break
 				}
 
@@ -288,7 +294,6 @@ func (h *HexViewWidget) Build() {
 				//column2, hex dump
 				for i := 0; i < n; i++ {
 					I.SameLineV(startOffset+h.charWidth*float32(i)*3, 0)
-					//I.Text(hex)
 					h.BuildHexCell(int64(lnum)*h.bytesPerLine+int64(i), lineBuffer[i])
 				}
 				//allow to select EOF
