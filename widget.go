@@ -235,6 +235,7 @@ func (h *HexViewWidget) Build() {
 	I.PushStyleVarVec2(I.StyleVarFramePadding, I.Vec2{})
 	I.PushStyleVarVec2(I.StyleVarItemSpacing, I.Vec2{})
 	I.PushStyleVarVec2(I.StyleVarCellPadding, I.Vec2{})
+	defer I.PopStyleVarV(3)
 
 	child := G.Child().Border(false).Layout(G.Custom(func() {
 		h.calcSizes()
@@ -245,6 +246,7 @@ func (h *HexViewWidget) Build() {
 
 		flags := I.TableFlags_BordersInnerV | I.TableFlags_BordersOuter | I.TableFlags_SizingFixedFit
 		if I.BeginTable("HexDumpTable", 3, flags, I.Vec2{}, 0) {
+			defer I.EndTable()
 			I.TableSetupColumn("Offset", 0, addressSize, 0)
 			I.TableSetupColumn("HexDump", 0, 3*h.charWidth*float32(h.bytesPerLine), 0)
 			I.TableSetupColumn("Readable", 0, float32(h.bytesPerLine)*h.charWidth, 0)
@@ -256,6 +258,7 @@ func (h *HexViewWidget) Build() {
 			//dumb hack: do numlines + 10 because on big files, the last few lines get chopped off
 			//due to floating point errors in scrolling calculations
 			clip.BeginV(int(numLines+10), h.charHeight)
+			defer clip.End()
 			for clip.Step() {
 				for lnum := clip.DisplayStart; lnum < clip.DisplayEnd; lnum++ {
 					offs := int64(lnum) * h.bytesPerLine
@@ -301,14 +304,11 @@ func (h *HexViewWidget) Build() {
 					}
 				}
 			}
-			clip.End()
 		}
-		I.EndTable()
 	}))
 
 	child.Build()
 
-	I.PopStyleVarV(3)
 }
 
 func (h *HexViewWidget) clampAddr(a *int64) {

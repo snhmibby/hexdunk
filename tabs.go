@@ -9,8 +9,10 @@ import (
 )
 
 func mkTabWidget() G.Widget {
+	//use a child with NoMove flag so the widget can do drag events
 	return G.Child().Flags(G.WindowFlagsNoMove).Layout(G.Custom(func() {
 		if len(HD.Tabs) != 0 && I.BeginTabBar("HexViewerTabs") {
+			defer I.EndTabBar()
 			for i, tab := range HD.Tabs {
 
 				hf, ok := HD.Files[tab.name]
@@ -23,13 +25,12 @@ func mkTabWidget() G.Widget {
 					flags |= G.TabItemFlagsUnsavedDocument
 				}
 				if I.BeginTabItem(hf.stats.Name()) {
+					defer I.EndTabItem()
 					HD.ActiveTab = i
 					h := HexView(fmt.Sprint(i, ".hexview##", hf.name), hf.buf, tab.view)
 					h.Build()
-					I.EndTabItem()
 				}
 			}
-			I.EndTabBar()
 		}
 	}))
 }
