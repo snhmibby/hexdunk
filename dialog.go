@@ -135,10 +135,8 @@ func (fd *fileDialog) dirTree(path string) {
 		return
 	}
 
-	var dostart = false
 	if strings.HasPrefix(fd.startDir, path) {
 		flags |= I.TreeNodeFlagsDefaultOpen
-		dostart = true
 	}
 
 	I.PushStyleVarFloat(I.StyleVarIndentSpacing, 7)
@@ -147,9 +145,6 @@ func (fd *fileDialog) dirTree(path string) {
 	open := I.TreeNodeV(info.Name(), flags)
 	if I.IsItemClicked(int(G.MouseButtonLeft)) {
 		fd.currentDir = path
-	}
-	if dostart {
-		I.SetItemDefaultFocus()
 	}
 	if open {
 		defer I.TreePop()
@@ -160,7 +155,6 @@ func (fd *fileDialog) dirTree(path string) {
 			}
 		}
 	}
-	fd.saveState()
 }
 
 func isHidden(entry fs.FileInfo) bool {
@@ -168,6 +162,7 @@ func isHidden(entry fs.FileInfo) bool {
 }
 
 func (fd *fileDialog) fileTable() {
+	I.Text(fd.currentDir)
 	if I.BeginTable("FSTable", 3, tableFlags, I.ContentRegionAvail(), 0) {
 		defer I.EndTable()
 		I.TableSetupColumn("Name", 0, 10, 0)
@@ -214,7 +209,7 @@ func (fd *fileDialog) selectFile() {
 	if !filepath.IsAbs(file) {
 		file = filepath.Join(fd.currentDir, file)
 	}
-	if fd.callback != nil && file != "" {
+	if fd.callback != nil && fd.selectedFile != "" && file != "" {
 		fd.callback(file)
 	}
 
@@ -245,11 +240,11 @@ func (fd *fileDialog) mkNavBar() {
 //
 
 func InfoDialog(title, msg string) {
-	G.Msgbox(title, msg).Buttons(G.MsgboxButtonsOk)
+	G.Msgbox("Info: "+title, msg).Buttons(G.MsgboxButtonsOk)
 }
 
 func ErrorDialog(title, msg string) {
-	G.Msgbox(title, msg).Buttons(G.MsgboxButtonsOk)
+	G.Msgbox("ERROR: "+title, msg).Buttons(G.MsgboxButtonsOk)
 }
 
 func OpenFileDialog(id string) {

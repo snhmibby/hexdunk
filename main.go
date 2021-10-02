@@ -57,7 +57,7 @@ func CloseHexFile(path string) error {
 func dialogOpenCB(p string) {
 	_, err := OpenHexFile(p)
 	if err != nil {
-		title := fmt.Sprintf("Error Opening File <%s>", p)
+		title := fmt.Sprintf("Opening File <%s>", p)
 		msg := fmt.Sprint(err)
 		ErrorDialog(title, msg)
 	}
@@ -67,7 +67,7 @@ func dialogSaveAsCB(p string) {
 	hf := ActiveFile()
 	f, err := os.OpenFile(p, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0666)
 	if err != nil {
-		title := fmt.Sprintf("Error Opening File <%s> (for saving).", p)
+		title := fmt.Sprintf("Opening File <%s> for saving.", p)
 		msg := fmt.Sprint(err)
 		ErrorDialog(title, msg)
 	}
@@ -75,7 +75,7 @@ func dialogSaveAsCB(p string) {
 	hf.buf.Seek(0, io.SeekStart)
 	n, err := io.Copy(f, hf.buf)
 	if err != nil || n != hf.buf.Size() {
-		title := fmt.Sprintf("Error Writing File <%s>", p)
+		title := fmt.Sprintf("Writing File <%s>", p)
 		msg := fmt.Sprintf("Written %d bytes (expected %d)\nError: %v", n, hf.buf.Size(), err)
 		ErrorDialog(title, msg)
 	}

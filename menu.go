@@ -77,28 +77,33 @@ func menuEditPreferences() {
 	//TODO
 }
 
+func menuFile() G.Widget {
+	return G.Menu("File").Layout(
+		G.MenuItem("New").OnClick(menuFileNew),
+		G.MenuItem("Open").OnClick(menuFileOpen),
+		G.Separator(),
+		G.MenuItem("Save").OnClick(menuFileSave),
+		G.MenuItem("Save As").OnClick(menuFileSaveAs),
+		G.MenuItem("Close Tab").OnClick(menuFileCloseTab),
+		G.Separator(),
+		G.MenuItem("Settings").OnClick(menuEditPreferences),
+		G.Separator(),
+		G.MenuItem("Quit").OnClick(menuFileQuit),
+	)
+}
+
+func menuEdit() G.Widget {
+	return G.Menu("Edit").Layout(
+		G.MenuItem("Cut").OnClick(menuEditCut),
+		G.MenuItem("Copy").OnClick(menuEditCopy),
+		G.MenuItem("Paste").OnClick(menuEditPaste),
+	)
+}
+
 func mkMenu() G.Widget {
 	return G.MenuBar().Layout(
-		G.Menu("File").Layout(
-			G.MenuItem("New").OnClick(menuFileNew),
-			G.MenuItem("Open").OnClick(menuFileOpen),
-			G.Separator(),
-			G.MenuItem("Save").OnClick(menuFileSave),
-			G.MenuItem("Save As").OnClick(menuFileSaveAs),
-			G.MenuItem("Close Tab").OnClick(menuFileCloseTab),
-			G.Separator(),
-			G.MenuItem("Quit").OnClick(menuFileQuit),
-		),
-		G.Menu("Edit").Layout(
-			G.MenuItem("Cut").OnClick(menuEditCut),
-			G.MenuItem("Copy").OnClick(menuEditCopy),
-			G.MenuItem("Paste").OnClick(menuEditPaste),
-			G.Separator(),
-			G.MenuItem("Settings").OnClick(menuEditPreferences),
-		),
-		G.Menu("View").Layout(
-			G.MenuItem("Search/Replace"),
-		),
+		menuFile(),
+		menuEdit(),
 		G.Menu("Plugin").Layout(
 			G.MenuItem("Load"),
 			G.Separator(),

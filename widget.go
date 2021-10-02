@@ -176,7 +176,7 @@ func (h *HexViewWidget) printBG(addr int64, cursorw, selectw int) {
 	}
 
 	if h.inSelection(addr) {
-		selectionBG := color.RGBA{B: 200, A: 100}
+		selectionBG := color.RGBA{R: 50, G: 30, B: 150, A: 100}
 		rect := image.Pt(selectw*int(h.charWidth), int(h.charHeight))
 		canvas.AddRectFilled(pos, pos.Add(rect), selectionBG, 0, 0)
 	}
@@ -237,78 +237,77 @@ func (h *HexViewWidget) Build() {
 	I.PushStyleVarVec2(I.StyleVarCellPadding, I.Vec2{})
 	defer I.PopStyleVarV(3)
 
-	child := G.Child().Border(false).Layout(G.Custom(func() {
-		h.calcSizes()
-		h.handleKeys() //XXX should this be here or somewhere else??
+	G.Child().Border(false).Flags(G.WindowFlagsNoMove).Layout(G.Custom(h.printWidget)).Build()
+}
 
-		maxAddr := numHexDigits(h.buffer.Size())                //saved for printing address
-		addressSize, _ := G.CalcTextSize(addrLabel(0, maxAddr)) //x-position of column 2
+func (h *HexViewWidget) printWidget() {
+	h.calcSizes()
+	h.handleKeys() //XXX this should be somewhere else??
 
-		flags := I.TableFlags_BordersInnerV | I.TableFlags_BordersOuter | I.TableFlags_SizingFixedFit
-		if I.BeginTable("HexDumpTable", 3, flags, I.Vec2{}, 0) {
-			defer I.EndTable()
-			I.TableSetupColumn("Offset", 0, addressSize, 0)
-			I.TableSetupColumn("HexDump", 0, 3*h.charWidth*float32(h.bytesPerLine), 0)
-			I.TableSetupColumn("Readable", 0, float32(h.bytesPerLine)*h.charWidth, 0)
+	maxAddr := numHexDigits(h.buffer.Size())                //saved for printing address
+	addressSize, _ := G.CalcTextSize(addrLabel(0, maxAddr)) //x-position of column 2
 
-			//print the hex dump using a listclipper
-			numLines := (h.buffer.Size() + h.bytesPerLine - 1) / h.bytesPerLine
-			lineBuffer := make([]byte, int(h.bytesPerLine)) //buffer to read the bytes for 1 line
-			var clip I.ListClipper
-			//dumb hack: do numlines + 10 because on big files, the last few lines get chopped off
-			//due to floating point errors in scrolling calculations
-			clip.BeginV(int(numLines+10), h.charHeight)
-			defer clip.End()
-			for clip.Step() {
-				for lnum := clip.DisplayStart; lnum < clip.DisplayEnd; lnum++ {
-					offs := int64(lnum) * h.bytesPerLine
-					if offs > h.buffer.Size() {
-						break
+	flags := I.TableFlags_BordersOuter | I.TableFlags_SizingFixedFit
+	if I.BeginTable("HexDumpTable", 3, flags, I.Vec2{}, 0) {
+		defer I.EndTable()
+		I.TableSetupColumn("Offset", 0, addressSize, 0)
+		I.TableSetupColumn("HexDump", 0, 3*h.charWidth*float32(h.bytesPerLine), 0)
+		I.TableSetupColumn("Readable", 0, float32(h.bytesPerLine)*h.charWidth, 0)
+
+		//print the hex dump using a listclipper
+		numLines := (h.buffer.Size() + h.bytesPerLine - 1) / h.bytesPerLine
+		lineBuffer := make([]byte, int(h.bytesPerLine)) //buffer to read the bytes for 1 line
+		var clip I.ListClipper
+		//dumb hack: do numlines + 10 because on big files, the last few lines get chopped off
+		//due to floating point errors in scrolling calculations
+		clip.BeginV(int(numLines+10), h.charHeight)
+		defer clip.End()
+		for clip.Step() {
+			for lnum := clip.DisplayStart; lnum < clip.DisplayEnd; lnum++ {
+				offs := int64(lnum) * h.bytesPerLine
+				if offs > h.buffer.Size() {
+					break
+				}
+
+				//read data for this line
+				h.buffer.Seek(offs, io.SeekStart)
+				n, e := h.buffer.Read(lineBuffer)
+				if n < 0 || e != nil {
+					//TODO: properly handle EOF here!!!
+					break
+				}
+
+				//address
+				I.TableNextColumn()
+				I.Text(addrLabel(offs, maxAddr))
+
+				//hex dump
+				I.TableNextColumn()
+				for i := 0; i < n; i++ {
+					if i != 0 {
+						I.SameLine()
 					}
-
-					//read data for this line
-					h.buffer.Seek(offs, io.SeekStart)
-					n, e := h.buffer.Read(lineBuffer)
-					if n < 0 || e != nil {
-						//TODO: properly handle EOF here!!!
-						break
+					h.BuildHexCell(offs+int64(i), lineBuffer[i])
+				}
+				//allow to select EOF??
+				if n != int(h.bytesPerLine) {
+					if n != 0 {
+						I.SameLine()
 					}
+					h.BuildHexCell(h.buffer.Size(), 0)
+				}
 
-					//address
-					I.TableNextColumn()
-					I.Text(addrLabel(offs, maxAddr))
-
-					//hex dump
-					I.TableNextColumn()
-					for i := 0; i < n; i++ {
-						if i != 0 {
-							I.SameLine()
-						}
-						h.BuildHexCell(offs+int64(i), lineBuffer[i])
+				//readable string
+				I.TableNextColumn()
+				for i := 0; i < n; i++ {
+					if i != 0 {
+						I.SameLine()
 					}
-					//allow to select EOF??
-					if n != int(h.bytesPerLine) {
-						if n != 0 {
-							I.SameLine()
-						}
-						h.BuildHexCell(h.buffer.Size(), 0)
-					}
-
-					//readable string
-					I.TableNextColumn()
-					for i := 0; i < n; i++ {
-						if i != 0 {
-							I.SameLine()
-						}
-						h.BuildStrCell(offs+int64(i), lineBuffer[i])
-					}
+					h.BuildStrCell(offs+int64(i), lineBuffer[i])
 				}
 			}
 		}
-	}))
-
-	child.Build()
-
+	}
 }
 
 func (h *HexViewWidget) clampAddr(a *int64) {
