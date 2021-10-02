@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	H "hexdunk/widget"
 	"io/fs"
 
 	B "github.com/snhmibby/filebuf"
@@ -25,7 +24,7 @@ type HexFile struct {
 //each tab is a view on an opened file
 type HexTab struct {
 	name string
-	view *H.HexViewState
+	view *HexViewState
 }
 
 //global variables
@@ -56,6 +55,5 @@ var HD Globals = Globals{
 //then it panics with that error message and it is possible to recover from and handle this later?
 func mkErr(msg string, e error) error {
 	err := fmt.Errorf("%s: %s: %v", ProgramName, msg, e)
-	panic(err)
 	return err
 }

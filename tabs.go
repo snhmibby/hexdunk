@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	H "hexdunk/widget"
 
 	G "github.com/AllenDang/giu"
 	I "github.com/AllenDang/imgui-go"
@@ -10,7 +9,7 @@ import (
 )
 
 func mkTabWidget() G.Widget {
-	return G.Custom(func() {
+	return G.Child().Flags(G.WindowFlagsNoMove).Layout(G.Custom(func() {
 		if len(HD.Tabs) != 0 && I.BeginTabBar("HexViewerTabs") {
 			for i, tab := range HD.Tabs {
 
@@ -25,14 +24,14 @@ func mkTabWidget() G.Widget {
 				}
 				if I.BeginTabItem(hf.stats.Name()) {
 					HD.ActiveTab = i
-					h := H.HexView(fmt.Sprint(i, ".hexview##", hf.name), hf.buf, tab.view)
+					h := HexView(fmt.Sprint(i, ".hexview##", hf.name), hf.buf, tab.view)
 					h.Build()
 					I.EndTabItem()
 				}
 			}
 			I.EndTabBar()
 		}
-	})
+	}))
 }
 
 func ActiveTab() *HexTab {
@@ -58,7 +57,7 @@ func ActiveFile() *HexFile {
 }
 
 func OpenTab(hf *HexFile) {
-	HD.Tabs = append(HD.Tabs, HexTab{name: hf.name, view: new(H.HexViewState)})
+	HD.Tabs = append(HD.Tabs, HexTab{name: hf.name, view: new(HexViewState)})
 }
 
 func CloseTab(t int) {

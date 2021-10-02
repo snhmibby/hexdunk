@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"os"
 
 	G "github.com/AllenDang/giu"
@@ -16,10 +18,36 @@ func menuFileNew() {
 	OpenHexFile(tmpPath.Name())
 }
 
-//TODO: dialogs...
-func menuFileOpen()   {}
-func menuFileSave()   {}
-func menuFileSaveAs() {}
+func dialogOpenCB(p string) {
+	_, err := OpenHexFile(p)
+	if err != nil {
+		title := fmt.Sprintf("Error Opening File <%s>", p)
+		msg := fmt.Sprint(err)
+		G.Msgbox(title, msg).Buttons(G.MsgboxButtonsOk)
+	}
+}
+
+func menuFileOpen() {
+	G.OpenPopup(DialogOpen)
+}
+
+func menuFileSave() {
+	G.OpenPopup(DialogSaveAs)
+}
+func menuFileSaveAs() {
+	G.OpenPopup(DialogSaveAs)
+}
+
+func dialogSaveAsCB(p string) {
+	hf := ActiveFile()
+	f, err := os.OpenFile(p, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0666)
+	if err != nil {
+		title := fmt.Sprintf("Error Opening File <%s> (for saving).", p)
+		msg := fmt.Sprint(err)
+		G.Msgbox(title, msg).Buttons(G.MsgboxButtonsOk)
+	}
+	io.Copy(f, hf.buf)
+}
 
 func menuFileCloseTab() {
 	if HD.ActiveTab < 0 {
@@ -71,11 +99,17 @@ func menuEditPreferences() {
 	//TODO
 }
 
-var testBool bool
+const (
+	DialogOpen   = "Open"
+	DialogSaveAs = "Save As"
+)
 
-func mkMenu() *G.MenuBarWidget {
+func mkMenu() G.Widget {
 	return G.MenuBar().Layout(
 		G.Menu("File").Layout(
+			//PrepareFileDialog(DialogOpen, dialogOpenCB),
+			//G.Custom(func() { G.OpenPopup(DialogOpen) }),
+			//PrepareFileDialog(DialogSaveAs, dialogSaveAsCB),
 			G.MenuItem("New").OnClick(menuFileNew),
 			G.MenuItem("Open").OnClick(menuFileOpen),
 			G.Separator(),
@@ -103,7 +137,6 @@ func mkMenu() *G.MenuBarWidget {
 				G.MenuItem("DoBaz"),
 				G.MenuItem("Quux"),
 				G.Separator(),
-				G.Checkbox("Activate/Deactivate)", &testBool),
 				G.MenuItem("Settings"),
 			),
 		),
