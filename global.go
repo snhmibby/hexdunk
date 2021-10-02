@@ -11,6 +11,10 @@ import (
 
 const (
 	ProgramName = "HexDunk"
+
+	//dialog ids
+	DialogOpen   = "Open"
+	DialogSaveAs = "Save As"
 )
 
 //an opened file

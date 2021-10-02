@@ -22,14 +22,18 @@ const (
 )
 
 type fileDialog struct {
-	id              string //giu/imgiu id
+	//imgui/giu and popup related
+	id       string //giu/imgiu id
+	open     bool
+	callback func(path string)
+
+	//functionality related
 	statCache       map[string]fs.FileInfo
 	dirCache        map[string][]fs.FileInfo
 	showHiddenFiles bool
 	selectedFile    string //full path of file selected in fileTable
 	currentDir      string //full path of directory selected in dirTree
 	startDir        string //starting directory arg or cwd()
-	callback        func(path string)
 }
 
 var _ G.Disposable = &fileDialog{}
@@ -206,10 +210,15 @@ func (fd *fileDialog) fileTable() {
 }
 
 func (fd *fileDialog) selectFile() {
-	I.CloseCurrentPopup()
-	if fd.callback != nil && fd.selectedFile != "" {
-		fd.callback(fd.selectedFile)
+	file := fd.selectedFile
+	if !filepath.IsAbs(file) {
+		file = filepath.Join(fd.currentDir, file)
 	}
+	if fd.callback != nil && file != "" {
+		fd.callback(file)
+	}
+
+	I.CloseCurrentPopup()
 	fd.statCache = make(map[string]fs.FileInfo)
 	fd.dirCache = make(map[string][]fs.FileInfo)
 	fd.startDir, _ = filepath.Abs(".")
@@ -222,13 +231,39 @@ func (fd *fileDialog) saveState() {
 	G.Context.SetState(fd.id, fd)
 }
 
-func (fd *fileDialog) cancel() {
+func (fd *fileDialog) close() {
 	I.CloseCurrentPopup()
 }
 
 func (fd *fileDialog) mkNavBar() {
 	width, _ := G.GetAvailableRegion()
 	G.InputText(&fd.selectedFile).Size(width).Build()
+}
+
+//
+//Public:
+//
+
+func InfoDialog(title, msg string) {
+	G.Msgbox(title, msg).Buttons(G.MsgboxButtonsOk)
+}
+
+func ErrorDialog(title, msg string) {
+	G.Msgbox(title, msg).Buttons(G.MsgboxButtonsOk)
+}
+
+func OpenFileDialog(id string) {
+	fdRaw := G.Context.GetState(id)
+	if fdRaw == nil {
+		panic("Couldn't open file dialog " + id)
+	}
+	fd := fdRaw.(*fileDialog)
+	fd.open = true
+	fd.saveState()
+}
+
+func CloseFileDialog(id string) {
+	G.CloseCurrentPopup()
 }
 
 func PrepareFileDialog(id string, cb func(string)) G.Widget {
@@ -264,9 +299,14 @@ func PrepareFileDialog(id string, cb func(string)) G.Widget {
 			}),
 			G.Row(
 				G.Checkbox("Show Hidden", &fd.showHiddenFiles),
-				G.Button("Cancel").OnClick(fd.cancel),
+				G.Button("Cancel").OnClick(fd.close),
 				G.Button(id).OnClick(fd.selectFile),
 			),
 		).Flags(G.WindowFlagsNone).Build()
+
+		if fd.open {
+			G.OpenPopup(id)
+			fd.open = false
+		}
 	})
 }
