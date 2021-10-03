@@ -291,13 +291,20 @@ func PrepareFileDialog(id string, cb func(string)) G.Widget {
 		G.PopupModal(id).Layout(
 			G.Custom(fd.mkNavBar),
 			G.Custom(func() {
+				//use a child frame to block the lists going off-screen
+				//at the bottom of the screen is a row of buttons and such
 				w, h := G.GetAvailableRegion()
+				//adjust for buttonrow height
+				_, spacing := G.GetItemSpacing()
+				_, padding := G.GetFramePadding()
+				_, buttonH := G.CalcTextSize("F")
+				h -= buttonH + padding*2 + spacing
 				G.Child().Layout(
 					G.SplitLayout(G.DirectionHorizontal, true, 200,
 						G.Custom(func() { fd.dirTree(filepath.FromSlash("/")) }),
 						G.Custom(fd.fileTable),
 					),
-				).Border(false).Size(w, h-25).Build()
+				).Border(false).Size(w, h).Build()
 			}),
 			G.Row(
 				G.Checkbox("Show Hidden", &fd.showHiddenFiles),
