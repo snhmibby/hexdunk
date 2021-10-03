@@ -15,10 +15,11 @@ import (
 )
 
 const (
-	timeFmt    = "02 Jan 06 15:04"
-	nodeFlags  = I.TreeNodeFlagsSpanFullWidth | I.TreeNodeFlagsOpenOnArrow | I.TreeNodeFlagsOpenOnDoubleClick
-	leafFlags  = nodeFlags | I.TreeNodeFlagsLeaf
-	tableFlags = I.TableFlags_ScrollX | I.TableFlags_ScrollY | I.TableFlags_Resizable | I.TableFlags_SizingStretchProp
+	timeFmt     = "02 Jan 06 15:04"
+	nodeFlags   = I.TreeNodeFlagsSpanFullWidth | I.TreeNodeFlagsOpenOnArrow | I.TreeNodeFlagsOpenOnDoubleClick
+	leafFlags   = I.TreeNodeFlagsLeaf
+	tableFlags  = I.TableFlags_ScrollX | I.TableFlags_ScrollY | I.TableFlags_Resizable | I.TableFlags_SizingStretchProp
+	selectFlags = I.SelectableFlagsAllowDoubleClick | I.SelectableFlagsSpanAllColumns
 )
 
 type fileDialog struct {
@@ -190,14 +191,9 @@ func (fd *fileDialog) fileTable() {
 			path := filepath.Join(fd.currentDir, e.Name())
 
 			I.TableNextRow(0, 0)
-			if path == fd.selectedFile {
-				color := I.GetColorU32(I.CurrentStyle().GetColor(I.StyleColorTextSelectedBg))
-				I.TableSetBgColor(I.TableBgTarget_RowBg0, uint32(color), -1)
-			}
 
 			I.TableNextColumn()
-			I.Text(e.Name())
-			if I.IsItemClicked(int(G.MouseButtonLeft)) {
+			if I.SelectableV(e.Name(), path == fd.selectedFile, selectFlags, I.Vec2{}) {
 				fd.selectedFile = path
 				if I.IsMouseDoubleClicked(int(G.MouseButtonLeft)) {
 					fd.selectFile()
