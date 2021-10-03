@@ -29,10 +29,9 @@ func menuFileSaveAs() {
 }
 
 func menuFileCloseTab() {
-	if HD.ActiveTab < 0 {
-		return
+	if HD.ActiveTab >= 0 {
+		CloseTab(HD.ActiveTab)
 	}
-	CloseTab(HD.ActiveTab)
 }
 
 func menuFileQuit() {
@@ -44,11 +43,18 @@ func menuFileQuit() {
 func menuEditCut() {
 	file := ActiveFile()
 	tab := ActiveTab()
+	st := tab.view
 	if file != nil {
-		offs, size := tab.view.Selection()
+		offs, size := st.Selection()
 		if size > 0 {
+			if st.inSelection(st.cursor) {
+				//should be always true??
+				st.cursor = offs
+			} else {
+				panic("bad programmer, cursor is outside of selection on cut??")
+			}
 			HD.ClipBoard = file.buf.Cut(offs, size)
-			tab.view.SetSelection(offs, 0)
+			st.SetSelection(offs, 0)
 		}
 	}
 }

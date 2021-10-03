@@ -64,22 +64,36 @@ func dialogOpenCB(p string) {
 	}
 }
 
+//XXX This confusingly can change the buffers that were Cut from this file and still need to Read from it
+//There are 2 obvious ways to resolve this:
+//1) On every Cut/Paste-operation, load all file-blocks into memory
+//2) On every save operation, load all affected file-blocks into memory.
+//   This would mean that we have to keep track of where they went (were pasted)
 func dialogSaveAsCB(p string) {
 	hf := ActiveFile()
-	f, err := os.OpenFile(p, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0666)
+	f, err := os.CreateTemp("", "")
 	if err != nil {
 		title := fmt.Sprintf("Opening File <%s> for saving.", p)
 		msg := fmt.Sprint(err)
 		ErrorDialog(title, msg)
 	}
-
 	hf.buf.Seek(0, io.SeekStart)
 	n, err := io.Copy(f, hf.buf)
 	if err != nil || n != hf.buf.Size() {
+		os.Remove(f.Name())
 		title := fmt.Sprintf("Writing File <%s>", p)
 		msg := fmt.Sprintf("Written %d bytes (expected %d)\nError: %v", n, hf.buf.Size(), err)
 		ErrorDialog(title, msg)
 	}
+	err = os.Rename(f.Name(), p)
+	if err != nil {
+		title := fmt.Sprintf("Naming File <%s>", p)
+		msg := fmt.Sprintf("Couldn't rename tmp file <%s> to <%s>", f.Name(), p)
+		ErrorDialog(title, msg)
+	}
+
+	//XXX open a new buffer on the whole file again here?
+	//this would refresh the working tree buffer
 }
 
 func draw() {

@@ -40,24 +40,29 @@ type HexViewState struct {
 	//offset in the file where is the cursor (should be on screen?)
 	cursor int64
 
-	//selected bytes (offset from cursor)
-	selection int64
+	//selected bytes
+	selectionStart, selectionSize int64
 
 	//selection dragging
 	dragging  bool
-	lastmouse int64
+	dragstart int64
 }
 
 func (view *HexViewState) Cursor() int64 {
 	return view.cursor
 }
 
-func (view *HexViewState) SetSelection(addr, size int64) {
-	view.cursor, view.selection = addr, size
+func (view *HexViewState) SetSelection(begin, size int64) {
+	view.selectionStart, view.selectionSize = begin, size
 }
 
-func (view *HexViewState) Selection() (addr, size int64) {
-	return view.cursor, view.selection
+func (view *HexViewState) Selection() (begin, size int64) {
+	return view.selectionStart, view.selectionSize
+}
+
+func (st *HexViewState) inSelection(addr int64) bool {
+	off, size := st.Selection()
+	return addr >= off && addr < off+size
 }
 
 type HexViewWidget struct {
@@ -141,29 +146,55 @@ func printByte(b byte) string {
 		return "."
 	}
 }
-func (h *HexViewWidget) inSelection(addr int64) bool {
-	off, size := h.state.Selection()
-	return addr >= off && addr < off+size
-}
 
 func (h *HexViewWidget) updateSelection(addr int64) {
-	//adjust selection
-	off := h.state.cursor
-	switch {
-	case addr < h.state.cursor:
-		h.state.cursor = addr
-		if h.state.dragging {
-			h.state.selection += off - addr
+	if h.buffer.Size() <= 0 {
+		panic("updateSelection(): trying to select something in an empty buffer")
+	}
+	s := h.state
+
+	if s.dragging {
+		//update mouse drag
+		if addr < s.dragstart {
+			s.selectionStart = addr
+			s.selectionSize = s.dragstart - addr + 1
 		} else {
-			h.state.selection += off - addr + 1
+			s.selectionStart = s.dragstart
+			s.selectionSize = addr - s.dragstart + 1
 		}
-	default:
-		h.state.selection = addr - off + 1
+	} else {
+		//shift-click: either create a new selection from cursor or update existing one
+		off, size := s.Selection()
+		if size == 0 {
+			if addr < s.cursor {
+				s.selectionStart = addr
+				s.selectionSize = s.cursor - addr + 1
+			} else {
+				s.selectionStart = s.cursor
+				s.selectionSize = addr - s.cursor
+			}
+		} else {
+			if addr-off < off+size-addr { //addr is closer to start than end of selection?
+				//shift bottom of selection to include addr
+				s.selectionStart = addr
+				s.selectionSize += off - addr
+			} else {
+				//shift end of selection to include up to addr
+				extra := addr - (off + size)
+				s.selectionSize += extra
+			}
+		}
 	}
 
 	//We allow EOF to be a selectable/editable field and such, chomp it here
-	if h.inSelection(h.buffer.Size()) {
-		h.state.selection--
+	if s.inSelection(h.buffer.Size()) {
+		s.selectionSize--
+		if s.cursor >= h.buffer.Size() {
+			s.cursor = h.buffer.Size() - 1
+		}
+	}
+	if s.inSelection(h.buffer.Size()) {
+		panic("bad programmer! EOF is included in selection")
 	}
 }
 
@@ -177,11 +208,17 @@ func (h *HexViewWidget) printBG(addr int64, cursorw, selectw int) {
 		canvas.AddRectFilled(pos, pos.Add(rect), cursorBG, 0, 0)
 	}
 
-	if h.inSelection(addr) {
+	if h.state.inSelection(addr) {
 		selectionBG := color.RGBA{R: 50, G: 30, B: 150, A: 100}
 		rect := image.Pt(selectw*int(h.charWidth), int(h.charHeight))
 		canvas.AddRectFilled(pos, pos.Add(rect), selectionBG, 0, 0)
 	}
+}
+
+func mouseMoved() bool {
+	delta := vec2Abs(G.Context.IO().GetMouseDelta())
+	//fmt.Println("mousedelta", delta)
+	return delta > 0
 }
 
 //a cell is a piece of text that corresponds to an file-offset.
@@ -194,26 +231,35 @@ func (h *HexViewWidget) BuildCell(addr int64, txt string) {
 	}
 	I.Text(txt)
 
-	G.Event().OnClick(G.MouseButtonMiddle, func() {
+	//XXX all of this should be moved to the parent widget for efficiency
+	//but is it a bit tedious to calculate what the mouse-position represents
+	if !G.IsItemHovered() {
+		return
+	}
+	if h.state.dragging {
 		h.updateSelection(addr)
-	}).OnMouseDown(G.MouseButtonLeft, func() {
-		h.state.lastmouse = addr
+	}
+	if G.IsMouseDown(G.MouseButtonLeft) {
 		if !h.state.dragging {
-			h.state.cursor = addr
-			h.state.selection = 0
-			h.state.dragging = true
+			if G.IsKeyDown(G.KeyLeftShift) || G.IsKeyDown(G.KeyRightShift) {
+				h.updateSelection(addr)
+			} else if mouseMoved() {
+				h.state.dragstart = addr
+				h.state.selectionStart = addr
+				h.state.selectionSize = 0
+				h.state.dragging = true
+			} else {
+				h.state.selectionSize = 0
+			}
 		}
-	}).OnMouseReleased(G.MouseButtonLeft, func() {
+		h.state.cursor = addr // should be updated after call to updateSelection
+		if h.state.dragging && addr == h.buffer.Size() {
+			h.state.cursor = addr - 1
+		}
+	}
+	if G.IsMouseReleased(G.MouseButtonLeft) {
 		h.state.dragging = false
-		if addr != h.state.lastmouse {
-			h.updateSelection(addr)
-		}
-	}).OnHover(func() {
-		//TODO: maybe print some info i.e. interpretation of different types starting at addr
-		if h.state.dragging && addr != h.state.lastmouse {
-			h.updateSelection(addr)
-		}
-	}).Build()
+	}
 }
 
 //to be called from Build() function, prints hexdump of byte and handles keyclicks and such
@@ -345,7 +391,8 @@ func (h *HexViewWidget) MoveUp() {
 }
 
 func (h *HexViewWidget) finishMove() {
-	h.state.selection = 0
+	h.state.selectionStart = 0
+	h.state.selectionSize = 0
 	h.clampAddr(&h.state.cursor)
 	h.ScrollTo(h.state.cursor)
 	h.saveState()

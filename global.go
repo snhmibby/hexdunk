@@ -5,7 +5,9 @@ package main
 import (
 	"fmt"
 	"io/fs"
+	"math"
 
+	I "github.com/AllenDang/imgui-go"
 	B "github.com/snhmibby/filebuf"
 )
 
@@ -54,6 +56,11 @@ var HD Globals = Globals{
 }
 
 /* some utility functions */
+
+//little hack for vec2
+func vec2Abs(v I.Vec2) float64 {
+	return math.Sqrt(float64(v.X*v.X + v.Y*v.Y))
+}
 
 //mkErr will create a properly formatted error message
 func mkErr(msg string, e error) error {
