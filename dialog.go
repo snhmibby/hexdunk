@@ -283,6 +283,10 @@ func PrepareFileDialog(id string, cb func(string)) G.Widget {
 	}
 
 	return G.Custom(func() {
+		if fd.open {
+			G.OpenPopup(id)
+			fd.open = false
+		}
 		G.SetNextWindowSizeV(600, 300, G.ConditionOnce)
 		G.PopupModal(id).Layout(
 			G.Custom(fd.mkNavBar),
@@ -309,9 +313,5 @@ func PrepareFileDialog(id string, cb func(string)) G.Widget {
 			),
 		).Flags(G.WindowFlagsNone).Build()
 
-		if fd.open {
-			G.OpenPopup(id)
-			fd.open = false
-		}
 	})
 }
