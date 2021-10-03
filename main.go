@@ -54,6 +54,7 @@ func CloseHexFile(path string) error {
 	}
 	return nil
 }
+
 func dialogOpenCB(p string) {
 	_, err := OpenHexFile(p)
 	if err != nil {

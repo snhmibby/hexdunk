@@ -12,6 +12,8 @@ import (
 	B "github.com/snhmibby/filebuf"
 )
 
+const hexwidgetEditPopup = "hexwidget###editPopup"
+
 func numHexDigits(addr int64) int {
 	hexdigits := 0
 	for addr > 0 {
@@ -192,7 +194,7 @@ func (h *HexViewWidget) BuildCell(addr int64, txt string) {
 	}
 	I.Text(txt)
 
-	G.Event().OnClick(G.MouseButtonRight, func() {
+	G.Event().OnClick(G.MouseButtonMiddle, func() {
 		h.updateSelection(addr)
 	}).OnMouseDown(G.MouseButtonLeft, func() {
 		h.state.lastmouse = addr
@@ -237,7 +239,10 @@ func (h *HexViewWidget) Build() {
 	I.PushStyleVarVec2(I.StyleVarCellPadding, I.Vec2{})
 	defer I.PopStyleVarV(3)
 
-	G.Child().Border(false).Flags(G.WindowFlagsNoMove).Layout(G.Custom(h.printWidget)).Build()
+	G.Child().Border(false).Flags(G.WindowFlagsNoMove).Layout(
+		G.Custom(h.printWidget),
+		G.ContextMenu().Layout(menuEdit()),
+	).Build()
 }
 
 func (h *HexViewWidget) printWidget() {

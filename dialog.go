@@ -99,6 +99,9 @@ func (fd *fileDialog) readDir(path string) ([]fs.FileInfo, error) {
 	return entry, nil
 }
 
+//Get all necessary info to display a directory, including giu.TreeNodeFlags*
+//any errors will result in (silently) not displaying this directory!!
+//path -> (TreeNodeFlags, fileinfo, [children fileinfo], succes/display?)
 func (fd *fileDialog) getDirInfo(path string) (int, fs.FileInfo, []fs.FileInfo, bool) {
 	info, err := fd.statFile(path)
 	if err != nil {
@@ -139,13 +142,17 @@ func (fd *fileDialog) dirTree(path string) {
 		flags |= I.TreeNodeFlagsDefaultOpen
 	}
 
-	I.PushStyleVarFloat(I.StyleVarIndentSpacing, 7)
+	I.PushStyleVarFloat(I.StyleVarIndentSpacing, 5)
 	defer I.PopStyleVar()
 
 	open := I.TreeNodeV(info.Name(), flags)
+	if path == fd.currentDir {
+		I.SetItemDefaultFocus()
+	}
 	if I.IsItemClicked(int(G.MouseButtonLeft)) {
 		fd.currentDir = path
 	}
+
 	if open {
 		defer I.TreePop()
 		for _, e := range entries {
@@ -240,11 +247,11 @@ func (fd *fileDialog) mkNavBar() {
 //
 
 func InfoDialog(title, msg string) {
-	G.Msgbox("Info: "+title, msg).Buttons(G.MsgboxButtonsOk)
+	G.Msgbox("Info:", title+":\n"+msg).Buttons(G.MsgboxButtonsOk)
 }
 
 func ErrorDialog(title, msg string) {
-	G.Msgbox("ERROR: "+title, msg).Buttons(G.MsgboxButtonsOk)
+	G.Msgbox("ERROR!", "When: "+title+"\n\nError: "+msg).Buttons(G.MsgboxButtonsOk)
 }
 
 func OpenFileDialog(id string) {

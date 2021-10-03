@@ -23,6 +23,7 @@ func menuFileOpen() {
 func menuFileSave() {
 	OpenFileDialog(DialogSaveAs)
 }
+
 func menuFileSaveAs() {
 	OpenFileDialog(DialogSaveAs)
 }
@@ -73,12 +74,12 @@ func menuEditPaste() {
 	}
 }
 
-func menuEditPreferences() {
+func menuEditSettings() {
 	//TODO
 }
 
 func menuFile() G.Widget {
-	return G.Menu("File").Layout(
+	return G.Layout{
 		G.MenuItem("New").OnClick(menuFileNew),
 		G.MenuItem("Open").OnClick(menuFileOpen),
 		G.Separator(),
@@ -86,34 +87,38 @@ func menuFile() G.Widget {
 		G.MenuItem("Save As").OnClick(menuFileSaveAs),
 		G.MenuItem("Close Tab").OnClick(menuFileCloseTab),
 		G.Separator(),
-		G.MenuItem("Settings").OnClick(menuEditPreferences),
+		G.MenuItem("Settings").OnClick(menuEditSettings),
 		G.Separator(),
 		G.MenuItem("Quit").OnClick(menuFileQuit),
-	)
+	}
 }
 
 func menuEdit() G.Widget {
-	return G.Menu("Edit").Layout(
+	return G.Layout{
 		G.MenuItem("Cut").OnClick(menuEditCut),
 		G.MenuItem("Copy").OnClick(menuEditCopy),
 		G.MenuItem("Paste").OnClick(menuEditPaste),
-	)
+	}
+}
+
+func menuPlugin() G.Widget {
+	return G.Layout{
+		G.MenuItem("Load"),
+		G.Separator(),
+		G.Menu("Plugin Foo").Layout(
+			G.MenuItem("DoBar"),
+			G.MenuItem("DoBaz"),
+			G.MenuItem("Quux"),
+			G.Separator(),
+			G.MenuItem("Settings"),
+		),
+	}
 }
 
 func mkMenu() G.Widget {
 	return G.MenuBar().Layout(
-		menuFile(),
-		menuEdit(),
-		G.Menu("Plugin").Layout(
-			G.MenuItem("Load"),
-			G.Separator(),
-			G.Menu("Plugin Foo").Layout(
-				G.MenuItem("DoBar"),
-				G.MenuItem("DoBaz"),
-				G.MenuItem("Quux"),
-				G.Separator(),
-				G.MenuItem("Settings"),
-			),
-		),
+		G.Menu("File").Layout(menuFile()),
+		G.Menu("Edit").Layout(menuEdit()),
+		G.Menu("Plugin").Layout(menuPlugin()),
 	)
 }

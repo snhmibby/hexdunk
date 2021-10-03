@@ -56,8 +56,7 @@ var HD Globals = Globals{
 /* some utility functions */
 
 //mkErr will create a properly formatted error message
-//then it panics with that error message and it is possible to recover from and handle this later?
 func mkErr(msg string, e error) error {
-	err := fmt.Errorf("%s: %s: %v", ProgramName, msg, e)
+	err := fmt.Errorf("%s: %v", msg, e)
 	return err
 }
