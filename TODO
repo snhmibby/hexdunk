@@ -1,5 +1,6 @@
-- Save file: write to a tmpfile first, then rename it on success
 - insert and delete single bytes, overwrite bytes
+  use vi bindings?
+- UNDO AND REDO QUEUE!
 - simple vi bindings
 - How to make scrollbars in Giu?
   I don't want to load the entire file so they have to work programmatically
