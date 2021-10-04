@@ -32,6 +32,7 @@ The following keys are bound (vi like)
 - undo/redo
 - goto address command
 - search/replace
+- configuration file
 - simple data inspection & editing (integers, strings, floats, etc.)
 - compound data inspection & editing (structs, lists, arrays, etc.)
 - plugin functionality (written in go)
