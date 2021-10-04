@@ -93,8 +93,8 @@ func menuFile() G.Widget {
 		G.MenuItem("Save As").OnClick(menuFileSaveAs),
 		G.MenuItem("Close Tab").OnClick(menuFileCloseTab),
 		G.Separator(),
-		G.MenuItem("Settings").OnClick(menuEditSettings),
-		G.Separator(),
+		//G.MenuItem("Settings").OnClick(menuEditSettings),
+		//G.Separator(),
 		G.MenuItem("Quit").OnClick(menuFileQuit),
 	}
 }
@@ -125,6 +125,6 @@ func mkMenu() G.Widget {
 	return G.MenuBar().Layout(
 		G.Menu("File").Layout(menuFile()),
 		G.Menu("Edit").Layout(menuEdit()),
-		G.Menu("Plugin").Layout(menuPlugin()),
+		//G.Menu("Plugin").Layout(menuPlugin()),
 	)
 }
