@@ -2,11 +2,9 @@
 A simple gui hex-editor with vi bindings
 
 ## Features
-- Fast loading and editing of arbitrary large files (currently limited to about
-  5GB because of problems with the imgui scrolling implementation. Will be
-  fixed later to use home-made scrolling)
-- Fast cut/copy/paste (in-program; not using system clipboard)
-- Looks good (uses the my dear imgui library)
+- Fast loading and editing of arbitrary large files
+- Fast cut/copy/paste
+- Looks good
 - Fully written in Go
 
 It uses the excellent packages:
