@@ -532,7 +532,8 @@ func (h *HexViewWidget) printOverWriteDump() {
 					I.SameLine()
 				}
 				addr := offs + int64(n)
-				if addr == h.state.cursor {
+				if addr == h.state.cursor && !seenCursor {
+					seenCursor = true
 					h.BuildInput(addr)
 				} else {
 					h.BuildHexCell(addr, 0)
