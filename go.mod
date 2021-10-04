@@ -1,4 +1,4 @@
-module hexdunk
+module github.com/snhmibby/hexdunk
 
 go 1.17
 

@@ -1,9 +1,12 @@
 - insert and delete single bytes, overwrite bytes
-  use vi bindings?
 - UNDO AND REDO QUEUE!
 - simple vi bindings
 - How to make scrollbars in Giu?
-  I don't want to load the entire file so they have to work programmatically
+  make 2 rectangles on the side, use proper imgui theme (lol)
+  have some api using an int64-range
+  notify the user of the visible range, let the user print its lines from line 0, to line 'numvisible'.
+  i.e. this 'breaks' the very big canvas to scroll idea that the normal scrollbar uses
+  on purpose - the very big canvas gets lots of floating point drift after some lines.
 - How to do dynamic loading in Go? I.e. a standard plugin system would load a dll, then
   the dll could register itself with the program in the 'init' function.
   there is the 'plugin' package in the standard library. Problem solved. (doesn't work on windows)
