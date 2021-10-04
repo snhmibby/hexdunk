@@ -169,6 +169,7 @@ func (h *HexViewWidget) handleKeys() {
 		G.KeyI: func() { h.state.editmode = InsertMode },
 		G.KeyO: func() { h.state.editmode = OverwriteMode },
 	}
+	//other modes are handled by the edit-input-widget in the hex dump
 	if h.state.editmode == NormalMode {
 		for k, f := range keymap {
 			if G.IsKeyPressed(k) {
@@ -187,10 +188,11 @@ func printByte(b byte) string {
 }
 
 func (h *HexViewWidget) updateSelection(addr int64) {
-	if h.buffer.Size() <= 0 {
-		panic("updateSelection(): trying to select something in an empty buffer")
-	}
 	s := h.state
+	if h.buffer.Size() <= 0 {
+		s.selectionSize = 0
+		s.selectionStart = 0
+	}
 
 	if s.dragging {
 		//update mouse drag
@@ -219,7 +221,7 @@ func (h *HexViewWidget) updateSelection(addr int64) {
 				s.selectionSize += off - addr
 			} else {
 				//shift end of selection to include up to addr
-				extra := addr - (off + size)
+				extra := addr - (off + size) + 1
 				s.selectionSize += extra
 			}
 		}
@@ -279,6 +281,7 @@ func (h *HexViewWidget) BuildCell(addr int64, txt string) {
 	}
 	I.Text(txt)
 
+	//Mouse handling, clicks and drags
 	//XXX all of this should be moved to the parent widget for efficiency
 	//but is it a bit tedious to calculate what the mouse-position represents
 	if !G.IsItemHovered() {

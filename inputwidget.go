@@ -11,8 +11,8 @@ import (
 
 type InputHexByte struct {
 	id        string
-	hi, lo    byte //should be [0..9A..Z]
-	at        int  //0 or 1
+	hi, lo    byte //should be <16
+	at        int  //0 or 1 (hi or low nibble)
 	cbCancel  func()
 	cbSuccess func(b byte)
 }

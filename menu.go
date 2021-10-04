@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	G "github.com/AllenDang/giu"
@@ -48,10 +49,11 @@ func menuEditCut() {
 		offs, size := st.Selection()
 		if size > 0 {
 			if st.inSelection(st.cursor) {
-				//should be always true??
 				st.cursor = offs
-			} else {
-				panic("bad programmer, cursor is outside of selection on cut??")
+			}
+			if offs < 0 || offs+size > file.buf.Size() {
+				ErrorDialog("Bad Cut?", fmt.Sprintf("Cut parameters (off: %d, size: %d) are outside of file.\nThis is a bug. How did you get outside of the file? :(", offs, size))
+				return
 			}
 			HD.ClipBoard = file.buf.Cut(offs, size)
 			st.SetSelection(offs, 0)
