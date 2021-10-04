@@ -1,5 +1,5 @@
 # Hexdunk
-A simple gui hex-editor with vi bindings
+A basic gui hex-editor with vi bindings
 
 ## Features
 - Fast loading and editing of arbitrary large files
@@ -27,6 +27,14 @@ The following keys are bound (vi like)
 - x: cut
 - y: copy
 - p: paste
+
+## Upcoming/planned features
+- undo/redo
+- goto address command
+- search/replace
+- simple data inspection & editing (integers, strings, floats, etc.)
+- compound data inspection & editing (structs, lists, arrays, etc.)
+- plugin functionality (written in go)
 
 ## Installation
 go get github.com/snhmibby/hexdunk@main
