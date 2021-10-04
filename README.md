@@ -1,9 +1,10 @@
 #Hexdunk
-A simple but solid hex-editor with vi bindings
+A simple gui hex-editor with vi bindings
 
 ##Features
-- Fast loading of arbitrary large files (currently limited to about 3GB because of problems with the imgui
-  scrolling implementation. Will be fixed later to use home-made scrolling)
+- Fast loading and editing of arbitrary large files (currently limited to about
+  5GB because of problems with the imgui scrolling implementation. Will be
+  fixed later to use home-made scrolling)
 - Fast cut/copy/paste (in-program; not using system clipboard)
 - Looks good (uses the my dear imgui library)
 - Fully written in Go
@@ -23,14 +24,20 @@ The following keys are bound (vi like)
 - h,j,k,l: move around
 - arrow keys: move around
 - i: insert mode (insert bytes before the cursor)
-- o: overwrite mode
+- o: overwrite mode (overwrite bytes)
+- escape: normal mode (move around/editing operations)
 - x: cut
 - y: copy
 - p: paste
 
 ##Installation
-go get github.com/snhmibby/hexdunk
+go get github.com/snhmibby/hexdunk@main
 
+##Warning
+This software is (very much) in alpha version-state. It works for simple use cases,
+but don't try to do complicated things.
+I.e. there is a bug where copying from an edited file, pasting in another,
+then writing the edited (1st) file to disk, could potentially change the other file-view. So keep all your write-back-to disk edits to 1 file for now :)
 
 ##Info &
 
