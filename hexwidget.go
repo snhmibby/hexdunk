@@ -20,6 +20,9 @@ func numHexDigits(addr int64) int {
 		hexdigits++
 		addr /= 16
 	}
+	if hexdigits == 0 {
+		return 1
+	}
 	return hexdigits
 }
 
@@ -36,6 +39,14 @@ type cursorAddr struct {
 	addr int64
 }
 
+type editMode int
+
+const (
+	NormalMode editMode = iota
+	InsertMode
+	OverwriteMode
+)
+
 type HexViewState struct {
 	//offset in the file where is the cursor (should be on screen?)
 	cursor int64
@@ -46,6 +57,9 @@ type HexViewState struct {
 	//selection dragging
 	dragging  bool
 	dragstart int64
+
+	//editing mode @ cursor
+	editmode editMode
 }
 
 func (view *HexViewState) Cursor() int64 {
@@ -90,6 +104,7 @@ func HexView(id string, b *B.Buffer, st *HexViewState) *HexViewWidget {
 }
 
 func (h *HexViewWidget) saveState() {
+	//widget stores state in the tab list and it is passed in the constructor
 }
 
 func bytesPerLine(width, charwidth float32) int {
@@ -125,16 +140,40 @@ func (h *HexViewWidget) onScreen(addr int64) bool {
 	return addr > top && addr < fin
 }
 
+//to make the cut&copy keys work with a selection or the item under cursor
+func (h *HexViewWidget) selectMinimal1(f func()) func() {
+	return func() {
+		if h.state.cursor < h.buffer.Size() && h.state.selectionSize == 0 {
+			h.state.selectionStart = h.state.cursor
+			h.state.selectionSize++
+		}
+		f()
+	}
+}
+
 func (h *HexViewWidget) handleKeys() {
 	keymap := map[G.Key]func(){
-		G.KeyJ: h.MoveDown,
-		G.KeyK: h.MoveUp,
-		G.KeyH: h.MoveLeft,
-		G.KeyL: h.MoveRight,
+		//movement
+		G.KeyDown:  h.MoveDown,
+		G.KeyJ:     h.MoveDown,
+		G.KeyUp:    h.MoveUp,
+		G.KeyK:     h.MoveUp,
+		G.KeyLeft:  h.MoveLeft,
+		G.KeyH:     h.MoveLeft,
+		G.KeyRight: h.MoveRight,
+		G.KeyL:     h.MoveRight,
+
+		G.KeyX: h.selectMinimal1(menuEditCut),
+		G.KeyY: h.selectMinimal1(menuEditCopy),
+		G.KeyP: menuEditPaste,
+		G.KeyI: func() { h.state.editmode = InsertMode },
+		G.KeyO: func() { h.state.editmode = OverwriteMode },
 	}
-	for k, f := range keymap {
-		if G.IsKeyPressed(k) {
-			f()
+	if h.state.editmode == NormalMode {
+		for k, f := range keymap {
+			if G.IsKeyPressed(k) {
+				f()
+			}
 		}
 	}
 }
@@ -204,6 +243,9 @@ func (h *HexViewWidget) printBG(addr int64, cursorw, selectw int) {
 
 	if addr == h.state.cursor {
 		cursorBG := color.RGBA{R: 255, G: 100, B: 000, A: 255}
+		if h.state.editmode != NormalMode {
+			cursorBG.B = 255
+		}
 		rect := image.Pt(cursorw*int(h.charWidth), int(h.charHeight))
 		canvas.AddRectFilled(pos, pos.Add(rect), cursorBG, 0, 0)
 	}
@@ -219,6 +261,12 @@ func mouseMoved() bool {
 	delta := vec2Abs(G.Context.IO().GetMouseDelta())
 	//fmt.Println("mousedelta", delta)
 	return delta > 0
+}
+
+//make an input-cell
+func (h *HexViewWidget) BuildInput(addr int64) {
+	h.printBG(addr, 2, 3)
+	InputHex("inputhex", h.cancelInput, h.advanceInput).Build()
 }
 
 //a cell is a piece of text that corresponds to an file-offset.
@@ -240,6 +288,7 @@ func (h *HexViewWidget) BuildCell(addr int64, txt string) {
 		h.updateSelection(addr)
 	}
 	if G.IsMouseDown(G.MouseButtonLeft) {
+		h.state.editmode = NormalMode
 		if !h.state.dragging {
 			if G.IsKeyDown(G.KeyLeftShift) || G.IsKeyDown(G.KeyRightShift) {
 				h.updateSelection(addr)
@@ -291,6 +340,24 @@ func (h *HexViewWidget) Build() {
 	).Build()
 }
 
+func (h *HexViewWidget) cancelInput() {
+	h.state.editmode = NormalMode
+}
+
+func (h *HexViewWidget) advanceInput(b byte) {
+	if h.state.cursor >= h.buffer.Size() {
+		h.state.editmode = InsertMode
+	}
+	switch h.state.editmode {
+	case InsertMode:
+		h.buffer.Insert1(h.state.cursor, b)
+	case OverwriteMode:
+		h.buffer.Remove(h.state.cursor, 1)
+		h.buffer.Insert1(h.state.cursor, b)
+	}
+	h.state.cursor++
+}
+
 func (h *HexViewWidget) printWidget() {
 	h.calcSizes()
 	h.handleKeys() //XXX this should be somewhere else??
@@ -305,68 +372,252 @@ func (h *HexViewWidget) printWidget() {
 		I.TableSetupColumn("HexDump", 0, 3*h.charWidth*float32(h.bytesPerLine), 0)
 		I.TableSetupColumn("Readable", 0, float32(h.bytesPerLine)*h.charWidth, 0)
 
-		//print the hex dump using a listclipper
-		numLines := (h.buffer.Size() + h.bytesPerLine - 1) / h.bytesPerLine
-		lineBuffer := make([]byte, int(h.bytesPerLine)) //buffer to read the bytes for 1 line
-		var clip I.ListClipper
-		//dumb hack: do numlines + 10 because on big files, the last few lines get chopped off
-		//due to floating point errors in scrolling calculations
-		clip.BeginV(int(numLines+10), h.charHeight)
-		defer clip.End()
-		for clip.Step() {
-			for lnum := clip.DisplayStart; lnum < clip.DisplayEnd; lnum++ {
-				offs := int64(lnum) * h.bytesPerLine
-				if offs > h.buffer.Size() {
-					break
-				}
+		//XXX this is simple solution, it was a bit difficult to put the logic for 3 different edit modes
+		//into 1 dump function and to take care of only printing 1 edit-input per window,
+		//so i have 3 big functions that basically do the same...
 
-				//read data for this line
+		//XXX it is necessary to take care only 1 edit-input gets print per hex dump.
+		//because input is not cleared (consumed), then the next edit would get the input also :))
+
+		//for the 1st implementation split into 3 different functions.
+		//should be unified in the future!!
+		switch h.state.editmode {
+		case NormalMode:
+			h.printNormalDump()
+		case OverwriteMode:
+			h.printOverWriteDump()
+		case InsertMode:
+			h.printInsertDump()
+		}
+	}
+}
+
+func (h *HexViewWidget) printInsertDump() {
+	//print the hex dump using a listclipper
+	numLines := (h.buffer.Size() + h.bytesPerLine - 1) / h.bytesPerLine
+	lineBuffer := make([]byte, int(h.bytesPerLine)) //buffer to read the bytes for 1 line
+	maxAddr := numHexDigits(h.buffer.Size())        //saved for printing address
+
+	var seenCursor = false //the input-handling means
+	var clip I.ListClipper
+	//dumb hack: do numlines + 10 because on big files, the last few lines get chopped off
+	//due to floating point errors in scrolling calculations
+	clip.BeginV(int(numLines+10), h.charHeight)
+	defer clip.End()
+	for clip.Step() {
+		for lnum := clip.DisplayStart; lnum < clip.DisplayEnd; lnum++ {
+			offs := int64(lnum) * h.bytesPerLine
+			if offs > h.buffer.Size() {
+				break
+			}
+
+			//read data for this line
+			if seenCursor {
+				h.buffer.Seek(offs-1, io.SeekStart)
+			} else {
 				h.buffer.Seek(offs, io.SeekStart)
-				n, e := h.buffer.Read(lineBuffer)
-				if n < 0 || e != nil {
-					//TODO: properly handle EOF here!!!
-					break
-				}
+			}
+			n, e := h.buffer.Read(lineBuffer)
+			if e != nil && e != io.EOF {
+				panic(e) //XXX not very elegant
+			}
 
-				//address
-				I.TableNextColumn()
-				I.Text(addrLabel(offs, maxAddr))
+			//address
+			I.TableNextColumn()
+			I.Text(addrLabel(offs, maxAddr))
 
-				//hex dump
-				I.TableNextColumn()
-				for i := 0; i < n; i++ {
-					if i != 0 {
-						I.SameLine()
-					}
-					h.BuildHexCell(offs+int64(i), lineBuffer[i])
+			//hex dump
+			var cursorOffset = 0 //if the cursor is in this line, linuBuffer reads should offset
+			I.TableNextColumn()
+			for i := 0; i < n; i++ {
+				if i != 0 {
+					I.SameLine()
 				}
-				//allow to select EOF??
-				if n != int(h.bytesPerLine) {
-					if n != 0 {
-						I.SameLine()
-					}
-					h.BuildHexCell(h.buffer.Size(), 0)
+				addr := offs + int64(i)
+				if addr == h.state.cursor && !seenCursor {
+					seenCursor = true
+					cursorOffset = 1
+					h.BuildInput(addr)
+				} else {
+					h.BuildHexCell(addr-int64(cursorOffset), lineBuffer[i-cursorOffset])
 				}
+			}
 
-				//readable string
-				I.TableNextColumn()
-				for i := 0; i < n; i++ {
-					if i != 0 {
-						I.SameLine()
+			//allow to select EOF
+			if n != int(h.bytesPerLine) {
+				if n != 0 {
+					I.SameLine()
+				}
+				addr := offs + int64(n)
+				if addr == h.state.cursor && !seenCursor {
+					seenCursor = true
+					cursorOffset = 1
+					h.BuildInput(addr)
+				} else {
+					if cursorOffset == 0 {
+						//just EOF
+						h.BuildHexCell(addr, 0)
+					} else {
+						h.BuildHexCell(addr-1, lineBuffer[n-1])
 					}
-					h.BuildStrCell(offs+int64(i), lineBuffer[i])
+				}
+			}
+
+			//readable string
+			I.TableNextColumn()
+			cursorOffset = 0
+			for i := 0; i < n; i++ {
+				if i != 0 {
+					I.SameLine()
+				}
+				addr := offs + int64(i)
+				if addr == h.state.cursor {
+					cursorOffset = 1
+					h.BuildStrCell(addr, 0)
+				} else {
+					h.BuildStrCell(addr, lineBuffer[i-cursorOffset])
 				}
 			}
 		}
 	}
 }
 
+func (h *HexViewWidget) printOverWriteDump() {
+	//print the hex dump using a listclipper
+	numLines := (h.buffer.Size() + h.bytesPerLine - 1) / h.bytesPerLine
+	lineBuffer := make([]byte, int(h.bytesPerLine)) //buffer to read the bytes for 1 line
+	maxAddr := numHexDigits(h.buffer.Size())        //saved for printing address
+
+	var seenCursor = false //the input-handling means
+	var clip I.ListClipper
+	//dumb hack: do numlines + 10 because on big files, the last few lines get chopped off
+	//due to floating point errors in scrolling calculations
+	clip.BeginV(int(numLines+10), h.charHeight)
+	defer clip.End()
+	for clip.Step() {
+		for lnum := clip.DisplayStart; lnum < clip.DisplayEnd; lnum++ {
+			offs := int64(lnum) * h.bytesPerLine
+			if offs > h.buffer.Size() {
+				break
+			}
+
+			//read data for this line
+			h.buffer.Seek(offs, io.SeekStart)
+			n, e := h.buffer.Read(lineBuffer)
+			if e != nil && e != io.EOF {
+				panic(e) //XXX not very elegant
+			}
+
+			//address
+			I.TableNextColumn()
+			I.Text(addrLabel(offs, maxAddr))
+
+			//hex dump
+			I.TableNextColumn()
+			for i := 0; i < n; i++ {
+				if i != 0 {
+					I.SameLine()
+				}
+				addr := offs + int64(i)
+				if addr == h.state.cursor && !seenCursor {
+					seenCursor = true
+					h.BuildInput(addr)
+				} else {
+					h.BuildHexCell(addr, lineBuffer[i])
+				}
+			}
+			//allow to select EOF
+			if n != int(h.bytesPerLine) {
+				if n != 0 {
+					I.SameLine()
+				}
+				addr := offs + int64(n)
+				if addr == h.state.cursor {
+					h.BuildInput(addr)
+				} else {
+					h.BuildHexCell(addr, 0)
+				}
+			}
+
+			//readable string
+			I.TableNextColumn()
+			for i := 0; i < n; i++ {
+				if i != 0 {
+					I.SameLine()
+				}
+				h.BuildStrCell(offs+int64(i), lineBuffer[i])
+			}
+		}
+	}
+}
+
+func (h *HexViewWidget) printNormalDump() {
+	//print the hex dump using a listclipper
+	numLines := (h.buffer.Size() + h.bytesPerLine - 1) / h.bytesPerLine
+	lineBuffer := make([]byte, int(h.bytesPerLine)) //buffer to read the bytes for 1 line
+	maxAddr := numHexDigits(h.buffer.Size())        //saved for printing address
+
+	var clip I.ListClipper
+	//dumb hack: do numlines + 10 because on big files, the last few lines get chopped off
+	//due to floating point errors in scrolling calculations
+	clip.BeginV(int(numLines+10), h.charHeight)
+	defer clip.End()
+	for clip.Step() {
+		for lnum := clip.DisplayStart; lnum < clip.DisplayEnd; lnum++ {
+			offs := int64(lnum) * h.bytesPerLine
+			if offs > h.buffer.Size() {
+				break
+			}
+
+			//read data for this line
+			h.buffer.Seek(offs, io.SeekStart)
+			n, e := h.buffer.Read(lineBuffer)
+			if e != nil && e != io.EOF {
+				panic(e) //XXX not very elegant
+			}
+
+			//address
+			I.TableNextColumn()
+			I.Text(addrLabel(offs, maxAddr))
+
+			//hex dump
+			I.TableNextColumn()
+			for i := 0; i < n; i++ {
+				if i != 0 {
+					I.SameLine()
+				}
+				addr := offs + int64(i)
+				h.BuildHexCell(addr, lineBuffer[i])
+			}
+
+			//allow to select EOF
+			if n != int(h.bytesPerLine) {
+				if n != 0 {
+					I.SameLine()
+				}
+				addr := offs + int64(n)
+				h.BuildHexCell(addr, 0)
+			}
+
+			//readable string
+			I.TableNextColumn()
+			for i := 0; i < n; i++ {
+				if i != 0 {
+					I.SameLine()
+				}
+				h.BuildStrCell(offs+int64(i), lineBuffer[i])
+			}
+		}
+	}
+}
+
 func (h *HexViewWidget) clampAddr(a *int64) {
+	//allow EOF
 	switch {
 	case *a < 0:
 		*a = 0
 	case *a >= h.buffer.Size():
-		*a = h.buffer.Size() - 1
+		*a = h.buffer.Size()
 	}
 }
 
