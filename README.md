@@ -40,7 +40,7 @@ The following keys are bound (vi like)
 ## Installation
 go get github.com/snhmibby/hexdunk@main
 
-## Warning
+## Disclaimer
 This software is (very much) in alpha version-state. It works for simple use cases,
 but don't try to do complicated things.
 I.e. there is a bug where copying from an edited file, pasting in another,
