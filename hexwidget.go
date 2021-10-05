@@ -344,11 +344,6 @@ func (h *HexViewWidget) BuildStrCell(addr int64, b byte) {
 }
 
 func (h *HexViewWidget) Build() {
-	I.PushStyleVarVec2(I.StyleVarFramePadding, I.Vec2{})
-	I.PushStyleVarVec2(I.StyleVarItemSpacing, I.Vec2{})
-	I.PushStyleVarVec2(I.StyleVarCellPadding, I.Vec2{})
-	defer I.PopStyleVarV(3)
-
 	//use a child widget with NoMove flags, so that dragging events gets passed to the
 	//widget, instead of dragging the window
 	G.Child().Border(false).Flags(G.WindowFlagsNoMove).Layout(
@@ -374,6 +369,11 @@ func (h *HexViewWidget) advanceInput(b byte) {
 }
 
 func (h *HexViewWidget) printWidget() {
+	I.PushStyleVarVec2(I.StyleVarFramePadding, I.Vec2{})
+	I.PushStyleVarVec2(I.StyleVarItemSpacing, I.Vec2{})
+	I.PushStyleVarVec2(I.StyleVarCellPadding, I.Vec2{})
+	defer I.PopStyleVarV(3)
+
 	h.calcSizes()
 	h.handleKeys() //XXX this should be somewhere else??
 

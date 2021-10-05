@@ -25,12 +25,12 @@ func menuFile() G.Widget {
 
 func menuEdit() G.Widget {
 	return G.Layout{
-		G.MenuItem("Cut").OnClick(actionCut),
-		G.MenuItem("Copy").OnClick(actionCopy),
-		G.MenuItem("Paste").OnClick(actionPaste),
+		G.MenuItem("Cut        x").OnClick(actionCut),
+		G.MenuItem("Copy       y").OnClick(actionCopy),
+		G.MenuItem("Paste      p").OnClick(actionPaste),
 		G.Separator(),
-		G.MenuItem("Undo").OnClick(actionUndo),
-		G.MenuItem("Redo").OnClick(actionRedo),
+		G.MenuItem("Undo       u").OnClick(actionUndo),
+		G.MenuItem("Redo       r").OnClick(actionRedo),
 	}
 }
 
