@@ -1,6 +1,3 @@
-- insert and delete single bytes, overwrite bytes
-- UNDO AND REDO QUEUE!
-- simple vi bindings
 - How to make scrollbars in Giu?
   make 2 rectangles on the side, use proper imgui theme (lol)
   have some api using an int64-range
@@ -10,3 +7,6 @@
 - How to do dynamic loading in Go? I.e. a standard plugin system would load a dll, then
   the dll could register itself with the program in the 'init' function.
   there is the 'plugin' package in the standard library. Problem solved. (doesn't work on windows)
+- See the list in the readme for TODO-features
+- Buffers that reference portion of a file-on-disk should be read into memory if a save operation
+  will touch those portions on disk (!important!! BUG)
