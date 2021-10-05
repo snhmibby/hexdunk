@@ -55,6 +55,28 @@ var HD Globals = Globals{
 	Files:     make(map[string]*HexFile),
 }
 
+func ActiveTab() *HexTab {
+	if HD.ActiveTab >= 0 {
+		//consistency check
+		if ActiveFile() == nil {
+			panic("impossible")
+		}
+		return &HD.Tabs[HD.ActiveTab]
+	}
+	return nil
+}
+
+func ActiveFile() *HexFile {
+	if HD.ActiveTab >= 0 {
+		hf, ok := HD.Files[HD.Tabs[HD.ActiveTab].name]
+		if !ok {
+			panic("tab opened on closed file")
+		}
+		return hf
+	}
+	return nil
+}
+
 /* some utility functions */
 
 //little hack for vec2

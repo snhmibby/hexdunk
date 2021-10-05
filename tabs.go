@@ -34,28 +34,6 @@ func mkTabWidget() G.Widget {
 	})
 }
 
-func ActiveTab() *HexTab {
-	if HD.ActiveTab >= 0 {
-		//consistency check
-		if ActiveFile() == nil {
-			panic("impossible")
-		}
-		return &HD.Tabs[HD.ActiveTab]
-	}
-	return nil
-}
-
-func ActiveFile() *HexFile {
-	if HD.ActiveTab >= 0 {
-		hf, ok := HD.Files[HD.Tabs[HD.ActiveTab].name]
-		if !ok {
-			panic("tab opened on closed file")
-		}
-		return hf
-	}
-	return nil
-}
-
 func OpenTab(hf *HexFile) {
 	HD.Tabs = append(HD.Tabs, HexTab{name: hf.name, view: new(HexViewState)})
 }

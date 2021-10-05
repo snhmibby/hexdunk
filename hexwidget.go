@@ -163,9 +163,9 @@ func (h *HexViewWidget) handleKeys() {
 		G.KeyRight: h.MoveRight,
 		G.KeyL:     h.MoveRight,
 
-		G.KeyX: h.selectMinimal1(menuEditCut),
-		G.KeyY: h.selectMinimal1(menuEditCopy),
-		G.KeyP: menuEditPaste,
+		G.KeyX: h.selectMinimal1(actionCut),
+		G.KeyY: h.selectMinimal1(actionCopy),
+		G.KeyP: actionPaste,
 		G.KeyI: func() { h.state.editmode = InsertMode },
 		G.KeyO: func() { h.state.editmode = OverwriteMode },
 	}
@@ -353,12 +353,10 @@ func (h *HexViewWidget) advanceInput(b byte) {
 	}
 	switch h.state.editmode {
 	case InsertMode:
-		h.buffer.Insert1(h.state.cursor, b)
+		actionInsert(b)
 	case OverwriteMode:
-		h.buffer.Remove(h.state.cursor, 1)
-		h.buffer.Insert1(h.state.cursor, b)
+		actionOverWrite(b)
 	}
-	h.state.cursor++
 }
 
 func (h *HexViewWidget) printWidget() {
