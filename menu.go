@@ -28,6 +28,9 @@ func menuEdit() G.Widget {
 		G.MenuItem("Cut").OnClick(actionCut),
 		G.MenuItem("Copy").OnClick(actionCopy),
 		G.MenuItem("Paste").OnClick(actionPaste),
+		G.Separator(),
+		G.MenuItem("Undo").OnClick(actionUndo),
+		G.MenuItem("Redo").OnClick(actionRedo),
 	}
 }
 
