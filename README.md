@@ -7,9 +7,9 @@ A basic gui hex-editor with vi bindings
 - Looks good
 - Fully written in Go
 
-It uses the excellent packages:
+It uses the packages:
 - "filebuf" (https://github.com/snhmibby/filebuf) for fast file loading and editing
-- "filetree" (https://github.com/snhmibby/filetree) for a beautiful file-system dialog.
+- "filetree" (https://github.com/snhmibby/filetree) for an imgui file-system dialog.
 
 ## Manual
 The following operations are supported in the hex-window:
