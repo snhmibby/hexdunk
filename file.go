@@ -7,6 +7,40 @@ import (
 	B "github.com/snhmibby/filebuf"
 )
 
+func (hf *HexFile) emptyRedo() {
+	hf.redo = []Undo{}
+}
+
+func (hf *HexFile) addRedo(f Undo) {
+	hf.redo = append(hf.redo, f)
+}
+
+func (hf *HexFile) addUndo(f Undo) {
+	hf.undo = append(hf.undo, f)
+}
+
+func (hf *HexFile) Redo() {
+	sz := len(hf.redo)
+	if sz == 0 {
+		return
+	}
+	f := hf.redo[sz-1]
+	hf.redo = hf.redo[:sz-1]
+	f.redo()
+	hf.addUndo(f)
+
+}
+func (hf *HexFile) Undo() {
+	sz := len(hf.undo)
+	if sz == 0 {
+		return
+	}
+	f := hf.undo[sz-1]
+	hf.undo = hf.undo[:sz-1]
+	f.undo()
+	hf.addRedo(f)
+}
+
 func OpenHexFile(path string) (*HexFile, error) {
 	hf, ok := HD.Files[path]
 	if !ok {

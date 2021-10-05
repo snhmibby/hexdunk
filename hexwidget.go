@@ -168,6 +168,9 @@ func (h *HexViewWidget) handleKeys() {
 		G.KeyP: actionPaste,
 		G.KeyI: func() { h.state.editmode = InsertMode },
 		G.KeyO: func() { h.state.editmode = OverwriteMode },
+
+		G.KeyU: actionUndo,
+		G.KeyR: actionRedo,
 	}
 	//other modes are handled by the edit-input-widget in the hex dump
 	if h.state.editmode == NormalMode {

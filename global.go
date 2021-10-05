@@ -17,12 +17,17 @@ const (
 	DialogSaveAs = "Save As"
 )
 
+type Undo struct {
+	undo, redo func()
+}
+
 //an opened file
 type HexFile struct {
-	name  string
-	buf   *B.Buffer
-	dirty bool
-	stats fs.FileInfo
+	name       string
+	buf        *B.Buffer
+	dirty      bool
+	stats      fs.FileInfo
+	undo, redo []Undo
 }
 
 //each tab is a view on an opened file

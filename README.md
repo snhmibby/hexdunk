@@ -1,35 +1,37 @@
 # Hexdunk
-A basic gui hex-editor with vi bindings
+A basic gui hex-editor with vi bindings.
 
 ## Features
-- Fast loading and editing of arbitrary large files
-- Fast cut/copy/paste
-- Looks good
-- Fully written in Go
+- Fast loading and editing of arbitrary large files.
+- Fast cut/copy/paste.
+- Looks good.
+- Unlimited undo/redo.
+- Fully written in Go.
 
 It uses the packages:
-- "filebuf" (https://github.com/snhmibby/filebuf) for fast file loading and editing
-- "filetree" (https://github.com/snhmibby/filetree) for an imgui file-system dialog.
+- "filebuf" (https://github.com/snhmibby/filebuf) for fast file loading and editing.
+- "filetree" (https://github.com/snhmibby/filetree) for an imgui file-system dialog..
 
 ## Manual
 The following operations are supported in the hex-window:
-- left click: select byte with cursor
-- right click: edit menu popup
-- mouse dragging: select bytes
-- shift clicking: extends selection
+- left click: select byte with cursor.
+- right click: edit menu popup.
+- mouse dragging: select bytes.
+- shift clicking: extends selection.
 
 The following keys are bound (vi like)
-- h,j,k,l: move around
-- arrow keys: move around
-- i: insert mode (insert bytes before the cursor)
-- o: overwrite mode (overwrite bytes)
-- escape: normal mode (move around/editing operations)
-- x: cut
-- y: copy
-- p: paste
+- h,j,k,l: move around.
+- arrow keys: move around.
+- i: insert mode (insert bytes before the cursor).
+- o: overwrite mode (overwrite bytes).
+- escape: normal mode (move around/editing operations).
+- x: cut.
+- y: copy.
+- p: paste.
+- u: undo.
+- r: redo.
 
 ## Upcoming/planned features
-- undo/redo
 - goto address command
 - search/replace
 - configuration file

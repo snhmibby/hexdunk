@@ -1,7 +1,6 @@
 package main
 
 //editor user actions that touch/need the activefile.
-//TODO: undo/redo mechanism should go here
 
 import (
 	"fmt"
@@ -9,14 +8,42 @@ import (
 	"os"
 )
 
+func actionRedo() {
+	file := ActiveFile()
+	if file == nil {
+		return
+	}
+	file.Redo()
+}
+
+func actionUndo() {
+	file := ActiveFile()
+	if file == nil {
+		return
+	}
+	file.Undo()
+}
+
 func actionInsert(b byte) {
 	tab := ActiveTab()
 	file := ActiveFile()
 	if tab == nil || file == nil {
 		return
 	}
-	file.buf.Insert1(tab.view.cursor, b)
+	off := tab.view.cursor
+	file.buf.Insert1(off, b)
 	tab.view.cursor++
+	file.emptyRedo()
+	file.addUndo(Undo{
+		undo: func() {
+			file.Cut(off, 1)
+			tab.view.cursor = off
+		},
+		redo: func() {
+			file.buf.Insert1(off, b)
+			tab.view.cursor = off
+		},
+	})
 }
 
 func actionOverWrite(b byte) {
@@ -25,10 +52,34 @@ func actionOverWrite(b byte) {
 	if tab == nil || file == nil {
 		return
 	}
-	file.buf.Remove(tab.view.cursor, 1)
-	file.buf.Insert1(tab.view.cursor, b)
+	off := tab.view.cursor
+	_, err := file.buf.Seek(off, io.SeekStart)
+	if err != nil {
+		return //TODO this is not error 'handling'
+	}
+	var overwritten_ = make([]byte, 1)
+	_, err = file.buf.Read(overwritten_)
+	if err != nil {
+		return //TODO: as above
+	}
+	overwritten := overwritten_[0]
+	file.buf.Remove(off, 1)
+	file.buf.Insert1(off, b)
 	tab.view.cursor++
-	tab.view.cursor++
+
+	file.emptyRedo()
+	file.addUndo(Undo{
+		undo: func() {
+			file.buf.Remove(off, 1)
+			file.buf.Insert1(off, overwritten)
+			tab.view.cursor = off
+		},
+		redo: func() {
+			file.buf.Remove(off, 1)
+			file.buf.Insert1(off, b)
+			tab.view.cursor = off + 1
+		},
+	})
 }
 
 func actionCut() {
@@ -47,6 +98,17 @@ func actionCut() {
 	HD.ClipBoard = cut
 	tab.view.cursor = off
 	tab.view.SetSelection(off, 0)
+	file.emptyRedo()
+	file.addUndo(Undo{
+		undo: func() {
+			file.buf.Paste(off, cut)
+			tab.view.cursor = off
+		},
+		redo: func() {
+			file.buf.Cut(off, size)
+			tab.view.cursor = off
+		},
+	})
 }
 
 func actionCopy() {
@@ -63,16 +125,29 @@ func actionCopy() {
 	HD.ClipBoard = cpy
 	tab.view.cursor = off
 	tab.view.SetSelection(off, 0)
+	file.emptyRedo()
 }
 
 //paste in front cursor
 func actionPaste() {
 	file := ActiveFile()
 	tab := ActiveTab()
-	if HD.ClipBoard != nil && file != nil {
-		offs := tab.view.Cursor()
-		file.Paste(offs, HD.ClipBoard)
+	if HD.ClipBoard == nil || file == nil || tab == nil {
+		return
 	}
+	off := tab.view.Cursor()
+	buf := HD.ClipBoard //XXX this creates hidden copies of a file-based tree
+	file.Paste(off, buf)
+
+	file.emptyRedo()
+	file.addUndo(Undo{
+		undo: func() {
+			file.buf.Cut(off, buf.Size())
+		},
+		redo: func() {
+			file.buf.Paste(off, buf)
+		},
+	})
 }
 
 func actionNewFile() {
