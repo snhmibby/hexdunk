@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"io"
+	"math"
 	"unicode"
 
 	G "github.com/AllenDang/giu"
@@ -98,8 +99,6 @@ type HexViewWidget struct {
 func HexView(id string, b *B.Buffer, st *HexViewState) *HexViewWidget {
 	h := &HexViewWidget{id: id, buffer: b}
 	h.state = st
-	h.calcSizes()
-	h.saveState()
 	return h
 }
 
@@ -151,6 +150,7 @@ func (h *HexViewWidget) selectMinimal1(f func()) func() {
 	}
 }
 
+//I would like to have this in main.go, but the giu/imgui design makes that difficult
 func (h *HexViewWidget) handleKeys() {
 	keymap := map[G.Key]func(){
 		//movement
@@ -259,6 +259,11 @@ func (h *HexViewWidget) printBG(addr int64, cursorw, selectw int) {
 	}
 }
 
+//little hack for vec2
+func vec2Abs(v I.Vec2) float64 {
+	return math.Sqrt(float64(v.X*v.X + v.Y*v.Y))
+}
+
 func mouseMoved() bool {
 	delta := vec2Abs(G.Context.IO().GetMouseDelta())
 	//fmt.Println("mousedelta", delta)
@@ -271,7 +276,7 @@ func (h *HexViewWidget) BuildInput(addr int64) {
 	InputHex("inputhex", h.cancelInput, h.advanceInput).Build()
 }
 
-//a cell is a piece of text that corresponds to an file-offset.
+//a cell is a piece of text that corresponds to a file-offset.
 //it can be clicked and dragged
 func (h *HexViewWidget) BuildCell(addr int64, txt string) {
 	if len(txt) == 1 {
@@ -317,7 +322,11 @@ func (h *HexViewWidget) BuildCell(addr int64, txt string) {
 //to be called from Build() function, prints hexdump of byte and handles keyclicks and such
 func (h *HexViewWidget) BuildHexCell(addr int64, b byte) {
 	var hex string
-	if addr == h.buffer.Size() {
+	endAddr := h.buffer.Size()
+	if h.onScreen(h.state.cursor) && h.state.editmode == InsertMode {
+		endAddr++
+	}
+	if addr == endAddr {
 		hex = "   "
 	} else {
 		hex = fmt.Sprintf("%02X ", b)
@@ -337,6 +346,8 @@ func (h *HexViewWidget) Build() {
 	I.PushStyleVarVec2(I.StyleVarCellPadding, I.Vec2{})
 	defer I.PopStyleVarV(3)
 
+	//use a child widget with NoMove flags, so that dragging events gets passed to the
+	//widget, instead of dragging the window
 	G.Child().Border(false).Flags(G.WindowFlagsNoMove).Layout(
 		G.Custom(h.printWidget),
 		G.ContextMenu().Layout(menuEdit()),
