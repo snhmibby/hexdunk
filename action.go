@@ -205,11 +205,15 @@ func dialogSaveAsCB(p string) {
 }
 
 func actionSaveFile() {
-	OpenFileDialog(DialogSaveAs)
+	if ActiveFile() != nil {
+		OpenFileDialog(DialogSaveAs)
+	}
 }
 
 func actionSaveAs() {
-	OpenFileDialog(DialogSaveAs)
+	if ActiveFile() != nil {
+		OpenFileDialog(DialogSaveAs)
+	}
 }
 
 func actionCloseTab() {
