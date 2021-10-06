@@ -228,13 +228,10 @@ func (h *HexViewWidget) updateSelection(addr int64) {
 
 	//We allow EOF to be a selectable/editable field and such, chomp it here
 	if s.inSelection(h.buffer.Size()) {
-		s.selectionSize--
+		s.selectionSize = h.buffer.Size() - s.selectionStart
 		if s.cursor >= h.buffer.Size() {
 			s.cursor = h.buffer.Size() - 1
 		}
-	}
-	if s.inSelection(h.buffer.Size()) {
-		panic("bad programmer! EOF is included in selection")
 	}
 }
 
