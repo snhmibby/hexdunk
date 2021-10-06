@@ -63,10 +63,6 @@ type HexViewState struct {
 	editmode editMode
 }
 
-func (view *HexViewState) Cursor() int64 {
-	return view.cursor
-}
-
 func (view *HexViewState) SetSelection(begin, size int64) {
 	view.selectionStart, view.selectionSize = begin, size
 }

@@ -30,6 +30,7 @@ func (hf *HexFile) Redo() {
 	hf.addUndo(f)
 
 }
+
 func (hf *HexFile) Undo() {
 	sz := len(hf.undo)
 	if sz == 0 {

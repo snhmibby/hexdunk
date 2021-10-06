@@ -135,7 +135,7 @@ func actionPaste() {
 	if HD.ClipBoard == nil || file == nil || tab == nil {
 		return
 	}
-	off := tab.view.Cursor()
+	off := tab.view.cursor
 	buf := HD.ClipBoard //XXX this creates hidden copies of a file-based tree
 	file.Paste(off, buf)
 
@@ -143,9 +143,11 @@ func actionPaste() {
 	file.addUndo(Undo{
 		undo: func() {
 			file.buf.Cut(off, buf.Size())
+			tab.view.cursor = off
 		},
 		redo: func() {
 			file.buf.Paste(off, buf)
+			tab.view.cursor = off
 		},
 	})
 }
@@ -198,7 +200,7 @@ func dialogSaveAsCB(p string) {
 		ErrorDialog(title, msg)
 	}
 
-	//XXX open a new buffer on the whole file again here.
+	//TODO XXX open a new buffer on the whole file again here?
 	//this would refresh the working tree buffer
 }
 
