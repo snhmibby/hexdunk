@@ -91,6 +91,7 @@ func (ih *InputHexByte) Build() {
 			input = v
 		}
 	}
+
 	if input != 255 {
 		if ih.at == 0 {
 			ih.hi = input
