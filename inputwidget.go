@@ -38,6 +38,26 @@ func InputHex(id string, cancel func(), success func(b byte)) G.Widget {
 	return h
 }
 
+//value input keys only
+var inputKeys = map[G.Key]byte{
+	G.Key0: 0,
+	G.Key1: 1,
+	G.Key2: 2,
+	G.Key3: 3,
+	G.Key4: 4,
+	G.Key5: 5,
+	G.Key6: 6,
+	G.Key7: 7,
+	G.Key8: 8,
+	G.Key9: 9,
+	G.KeyA: 0xA,
+	G.KeyB: 0xB,
+	G.KeyC: 0xC,
+	G.KeyD: 0xD,
+	G.KeyE: 0xE,
+	G.KeyF: 0xF,
+}
+
 func (ih *InputHexByte) Build() {
 	var txt string
 	switch ih.at {
@@ -51,49 +71,25 @@ func (ih *InputHexByte) Build() {
 
 	I.Text(txt)
 
-	var input byte = 255
-	switch {
-	case G.IsKeyPressed(G.Key0):
-		input = 0
-	case G.IsKeyPressed(G.Key1):
-		input = 1
-	case G.IsKeyPressed(G.Key2):
-		input = 2
-	case G.IsKeyPressed(G.Key3):
-		input = 3
-	case G.IsKeyPressed(G.Key4):
-		input = 4
-	case G.IsKeyPressed(G.Key5):
-		input = 5
-	case G.IsKeyPressed(G.Key6):
-		input = 6
-	case G.IsKeyPressed(G.Key7):
-		input = 7
-	case G.IsKeyPressed(G.Key8):
-		input = 8
-	case G.IsKeyPressed(G.Key9):
-		input = 9
-	case G.IsKeyPressed(G.KeyA):
-		input = 0xA
-	case G.IsKeyPressed(G.KeyB):
-		input = 0xB
-	case G.IsKeyPressed(G.KeyC):
-		input = 0xC
-	case G.IsKeyPressed(G.KeyD):
-		input = 0xD
-	case G.IsKeyPressed(G.KeyE):
-		input = 0xE
-	case G.IsKeyPressed(G.KeyF):
-		input = 0xF
-	case G.IsKeyPressed(G.KeyBackspace):
+	//handle input keys
+	if G.IsKeyPressed(G.KeyBackspace) {
 		ih.at--
 		if ih.at < 0 {
 			ih.cancel()
 			return
 		}
-	case G.IsKeyPressed(G.KeyEscape):
+	}
+
+	if G.IsKeyPressed(G.KeyEscape) {
 		ih.cancel()
 		return
+	}
+
+	var input byte = 255
+	for k, v := range inputKeys {
+		if G.IsKeyPressed(k) {
+			input = v
+		}
 	}
 	if input != 255 {
 		if ih.at == 0 {
@@ -106,6 +102,7 @@ func (ih *InputHexByte) Build() {
 			ih.success()
 		}
 	}
+
 	G.Context.SetState(ih.id, ih)
 }
 

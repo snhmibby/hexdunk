@@ -91,7 +91,7 @@ func actionCut() {
 	off, size := tab.view.Selection()
 	cut, err := file.Cut(off, size)
 	if err != nil {
-		ErrorDialog(fmt.Sprintf("Error in action: Cut(%d, %d)", off, size), fmt.Sprint(err))
+		//ErrorDialog(fmt.Sprintf("Error in action: Cut(%d, %d)", off, size), fmt.Sprint(err))
 		return
 	}
 
@@ -125,7 +125,6 @@ func actionCopy() {
 	HD.ClipBoard = cpy
 	tab.view.cursor = off
 	tab.view.SetSelection(off, 0)
-	file.emptyRedo()
 }
 
 //paste in front cursor
