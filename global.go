@@ -17,6 +17,10 @@ const (
 	DialogSaveAs = "Save As"
 )
 
+//probably should not be an opaque buffer, but a struct with an action-enum.
+//that way, we can adjust copy-buffers when a file gets saved (i.e. referenced
+//portion of the saved file should be removed through all buffers throughout
+//the program on a save.)
 type Undo struct {
 	undo, redo func()
 }
@@ -33,8 +37,31 @@ type HexFile struct {
 //each tab is a view on an opened file
 type HexTab struct {
 	name string
-	view *HexViewState
+	view *ViewState
 }
+
+type ViewState struct {
+	//offset in the file where is the cursor (should be on screen?)
+	cursor int64
+
+	//selected bytes
+	selectionStart, selectionSize int64
+
+	//selection dragging
+	dragging  bool
+	dragstart int64
+
+	//editing mode @ cursor
+	editmode editMode
+}
+
+type editMode int
+
+const (
+	NormalMode editMode = iota
+	InsertMode
+	OverwriteMode
+)
 
 //global variables
 type Globals struct {
@@ -78,6 +105,21 @@ func ActiveFile() *HexFile {
 		return hf
 	}
 	return nil
+}
+
+/* ViewState methods */
+
+func (view *ViewState) SetSelection(begin, size int64) {
+	view.selectionStart, view.selectionSize = begin, size
+}
+
+func (view *ViewState) Selection() (begin, size int64) {
+	return view.selectionStart, view.selectionSize
+}
+
+func (st *ViewState) inSelection(addr int64) bool {
+	off, size := st.Selection()
+	return addr >= off && addr < off+size
 }
 
 /* some utility functions */

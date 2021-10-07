@@ -31,53 +31,8 @@ func addrLabel(addr int64, nDigits int) string {
 	return fmt.Sprintf("%0*X:", nDigits, addr)
 }
 
-type TextColor struct {
-	fg, bg color.RGBA
-}
-
-type cursorAddr struct {
-	//byte address of cursor
-	addr int64
-}
-
-type editMode int
-
-const (
-	NormalMode editMode = iota
-	InsertMode
-	OverwriteMode
-)
-
-type HexViewState struct {
-	//offset in the file where is the cursor (should be on screen?)
-	cursor int64
-
-	//selected bytes
-	selectionStart, selectionSize int64
-
-	//selection dragging
-	dragging  bool
-	dragstart int64
-
-	//editing mode @ cursor
-	editmode editMode
-}
-
-func (view *HexViewState) SetSelection(begin, size int64) {
-	view.selectionStart, view.selectionSize = begin, size
-}
-
-func (view *HexViewState) Selection() (begin, size int64) {
-	return view.selectionStart, view.selectionSize
-}
-
-func (st *HexViewState) inSelection(addr int64) bool {
-	off, size := st.Selection()
-	return addr >= off && addr < off+size
-}
-
 type HexViewWidget struct {
-	state *HexViewState
+	state *ViewState
 
 	id     string
 	buffer *B.Buffer
@@ -92,7 +47,7 @@ type HexViewWidget struct {
 	addressBarWidth float32
 }
 
-func HexView(id string, b *B.Buffer, st *HexViewState) *HexViewWidget {
+func HexView(id string, b *B.Buffer, st *ViewState) *HexViewWidget {
 	h := &HexViewWidget{id: id, buffer: b}
 	h.state = st
 	return h
@@ -159,12 +114,12 @@ func (h *HexViewWidget) handleKeys() {
 		G.KeyRight: h.MoveRight,
 		G.KeyL:     h.MoveRight,
 
+		//edit
 		G.KeyX: h.selectMinimal1(actionCut),
 		G.KeyY: h.selectMinimal1(actionCopy),
 		G.KeyP: actionPaste,
 		G.KeyI: func() { h.state.editmode = InsertMode },
 		G.KeyO: func() { h.state.editmode = OverwriteMode },
-
 		G.KeyU: actionUndo,
 		G.KeyR: actionRedo,
 	}
@@ -318,6 +273,8 @@ func (h *HexViewWidget) BuildCell(addr int64, txt string) {
 //to be called from Build() function, prints hexdump of byte and handles keyclicks and such
 func (h *HexViewWidget) BuildHexCell(addr int64, b byte) {
 	var hex string
+
+	//put 1 'empty` box at EOF to be able to put the cursor there (for appending to a file)
 	endAddr := h.buffer.Size()
 	if h.onScreen(h.state.cursor) && h.state.editmode == InsertMode {
 		endAddr++
@@ -345,10 +302,12 @@ func (h *HexViewWidget) Build() {
 	).Build()
 }
 
+//callback for edit-widget
 func (h *HexViewWidget) cancelInput() {
 	h.state.editmode = NormalMode
 }
 
+//callback for edit-widget
 func (h *HexViewWidget) advanceInput(b byte) {
 	if h.state.cursor >= h.buffer.Size() {
 		h.state.editmode = InsertMode
@@ -370,13 +329,10 @@ func (h *HexViewWidget) printWidget() {
 	h.calcSizes()
 	h.handleKeys() //XXX this should be somewhere else??
 
-	maxAddr := numHexDigits(h.buffer.Size())                //saved for printing address
-	addressSize, _ := G.CalcTextSize(addrLabel(0, maxAddr)) //x-position of column 2
-
 	flags := I.TableFlags_BordersOuter | I.TableFlags_SizingFixedFit
 	if I.BeginTable("HexDumpTable", 3, flags, I.Vec2{}, 0) {
 		defer I.EndTable()
-		I.TableSetupColumn("Offset", 0, addressSize, 0)
+		I.TableSetupColumn("Offset", 0, h.addressBarWidth, 0)
 		I.TableSetupColumn("HexDump", 0, 3*h.charWidth*float32(h.bytesPerLine), 0)
 		I.TableSetupColumn("Readable", 0, float32(h.bytesPerLine)*h.charWidth, 0)
 

@@ -35,7 +35,7 @@ func mkTabWidget() G.Widget {
 }
 
 func OpenTab(hf *HexFile) {
-	HD.Tabs = append(HD.Tabs, HexTab{name: hf.name, view: new(HexViewState)})
+	HD.Tabs = append(HD.Tabs, HexTab{name: hf.name, view: new(ViewState)})
 }
 
 func CloseTab(t int) {
