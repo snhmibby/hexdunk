@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/snhmibby/filebuf"
 )
 
 func actionRedo() {
@@ -91,7 +93,7 @@ func actionCut() {
 	off, size := tab.view.Selection()
 	cut, err := file.Cut(off, size)
 	if err != nil {
-		//ErrorDialog(fmt.Sprintf("Error in action: Cut(%d, %d)", off, size), fmt.Sprint(err))
+		ErrorDialog(fmt.Sprintf("Error in action: Cut(%d, %d)", off, size), fmt.Sprint(err))
 		return
 	}
 
@@ -184,16 +186,34 @@ func dialogSaveAsCB(p string) {
 		msg := fmt.Sprint(err)
 		ErrorDialog(title, msg)
 	}
-	hf.buf.Seek(0, io.SeekStart)
-	n, err := io.Copy(f, hf.buf)
-	if err != nil || n != hf.buf.Size() {
+	/*
+		hf.buf.Seek(0, io.SeekStart)
+		n, err := io.Copy(f, hf.buf)
+		if err != nil || n != hf.buf.Size() {
+			os.Remove(f.Name())
+			title := fmt.Sprintf("Writing File <%s>", p)
+			msg := fmt.Sprintf("Written %d bytes (expected %d)\nError: %v", n, hf.buf.Size(), err)
+			ErrorDialog(title, msg)
+		}
+	*/
+	//use the iter interface
+	hf.buf.Iter(func(slice []byte) bool {
+		var n int
+		n, err = f.Write(slice)
+		if n != len(slice) || err != nil {
+			return true
+		}
+		return false
+	})
+	if err != nil {
 		os.Remove(f.Name())
 		title := fmt.Sprintf("Writing File <%s>", p)
-		msg := fmt.Sprintf("Written %d bytes (expected %d)\nError: %v", n, hf.buf.Size(), err)
+		msg := fmt.Sprintf("Error: %v", err)
 		ErrorDialog(title, msg)
 	}
 	err = os.Rename(f.Name(), p)
 	if err != nil {
+		os.Remove(f.Name())
 		title := fmt.Sprintf("Naming File <%s>", p)
 		msg := fmt.Sprintf("Couldn't rename tmp file <%s> to <%s>", f.Name(), p)
 		ErrorDialog(title, msg)
@@ -201,6 +221,10 @@ func dialogSaveAsCB(p string) {
 
 	//TODO XXX open a new buffer on the whole file again here?
 	//this would refresh the working tree buffer
+	hf.buf, err = filebuf.OpenFile(p)
+	if err != nil {
+		panic("TODO: handle OpenFile error after save")
+	}
 }
 
 func actionSaveFile() {

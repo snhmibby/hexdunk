@@ -41,8 +41,8 @@ type HexTab struct {
 }
 
 type ViewState struct {
-	//offset in the file where is the cursor (should be on screen?)
-	cursor int64
+	cursor   int64 //address (byte offset in file)
+	editmode editMode
 
 	//selected bytes
 	selectionStart, selectionSize int64
@@ -50,9 +50,6 @@ type ViewState struct {
 	//selection dragging
 	dragging  bool
 	dragstart int64
-
-	//editing mode @ cursor
-	editmode editMode
 }
 
 type editMode int

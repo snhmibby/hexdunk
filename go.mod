@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/AllenDang/giu v0.5.7-0.20210929101140-50bb71316c51
 	github.com/AllenDang/imgui-go v1.12.1-0.20210929095526-68b309906bdc
-	github.com/snhmibby/filebuf v0.0.0-20210924193811-90683552269d
+	github.com/snhmibby/filebuf v0.0.0-20211007205637-09d9d55bb255
 )
 
 require (

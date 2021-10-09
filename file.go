@@ -77,7 +77,6 @@ func CloseHexFile(path string) error {
 	if hf.dirty {
 		//TODO: dialog.ReallyClose ? Option to save
 	}
-	delete(HD.Files, path)
 
 	//sanity check
 	for _, t := range HD.Tabs {
@@ -85,6 +84,7 @@ func CloseHexFile(path string) error {
 			panic("shouldn't happen")
 		}
 	}
+	delete(HD.Files, path)
 	return nil
 }
 

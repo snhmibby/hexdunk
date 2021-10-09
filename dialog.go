@@ -143,6 +143,7 @@ func (fd *fileDialog) dirTree(path string) {
 		flags |= I.TreeNodeFlagsDefaultOpen
 	}
 
+	//XXX should be in main.go
 	I.PushStyleVarFloat(I.StyleVarIndentSpacing, 5)
 	defer I.PopStyleVar()
 

@@ -53,10 +53,6 @@ func HexView(id string, b *B.Buffer, st *ViewState) *HexViewWidget {
 	return h
 }
 
-func (h *HexViewWidget) saveState() {
-	//widget stores state in the tab list and it is passed in the constructor
-}
-
 func bytesPerLine(width, charwidth float32) int {
 	//to display 1 byte takes 4 characters: 2 for hexdump, 1 trailing space and 1 print
 	maxChars := int(width / (4 * charwidth))
@@ -87,7 +83,7 @@ func (h *HexViewWidget) calcSizes() {
 func (h *HexViewWidget) onScreen(addr int64) bool {
 	top := h.topAddr
 	fin := top + h.bytesPerLine*h.linesPerScreen
-	return addr > top && addr < fin
+	return addr >= top && addr < fin
 }
 
 //to make the cut&copy keys work with a selection or the item under cursor
@@ -101,7 +97,7 @@ func (h *HexViewWidget) selectMinimal1(f func()) func() {
 	}
 }
 
-//I would like to have this in main.go, but the giu/imgui design makes that difficult
+//I would like to have this in main.go?
 func (h *HexViewWidget) handleKeys() {
 	keymap := map[G.Key]func(){
 		//movement
@@ -611,7 +607,6 @@ func (h *HexViewWidget) finishMove() {
 	h.state.selectionSize = 0
 	h.clampAddr(&h.state.cursor)
 	h.ScrollTo(h.state.cursor)
-	h.saveState()
 }
 
 func (h *HexViewWidget) ScrollTo(addr int64) {
@@ -632,5 +627,4 @@ func (h *HexViewWidget) ScrollTo(addr int64) {
 	}
 	h.clampAddr(&top)
 	I.SetScrollY(float32(top/bpl) * h.charHeight)
-	h.saveState()
 }
