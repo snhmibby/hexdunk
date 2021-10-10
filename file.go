@@ -113,3 +113,13 @@ func (hf *HexFile) Cut(off, size int64) (*B.Buffer, error) {
 	}
 	return hf.buf.Cut(off, size), nil
 }
+
+func (h *HexFile) ClampAddr(a *int64) {
+	//allow EOF
+	switch {
+	case *a < 0:
+		*a = 0
+	case *a >= h.buf.Size():
+		*a = h.buf.Size()
+	}
+}

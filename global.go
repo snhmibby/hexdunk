@@ -41,15 +41,23 @@ type HexTab struct {
 }
 
 type ViewState struct {
-	cursor   int64 //address (byte offset in file)
-	editmode editMode
+	//generic state
+	cursor         int64 //address (byte offset in file)
+	topAddr        int64 //address on top of the screen
+	bytesPerLine   int64 //number of 'dunked' bytes per line
+	linesPerScreen int64 //number of lines per screen
+	editmode       editMode
 
-	//selected bytes
+	//current selection
 	selectionStart, selectionSize int64
 
-	//selection dragging
+	//selection mouse dragging
 	dragging  bool
 	dragstart int64
+
+	//update scroll-position (communicate to imgui scrollbar during widget build)
+	shouldScroll bool
+	scrollToAddr int64
 }
 
 type editMode int
@@ -104,7 +112,20 @@ func ActiveFile() *HexFile {
 	return nil
 }
 
-/* ViewState methods */
+/* Tab methods */
+
+//set the tab cursor to addr (make sure it is in file-range) and scroll to it
+func (tab *HexTab) setCursor(addr int64) {
+	hf, ok := HD.Files[HD.Tabs[HD.ActiveTab].name]
+	if !ok {
+		panic("tab opened on closed file")
+	}
+	hf.ClampAddr(&addr)
+	tab.view.cursor = addr
+	tab.view.ScrollTo(addr)
+}
+
+/* ViewState methods (should/could also be hextab* methods */
 
 func (view *ViewState) SetSelection(begin, size int64) {
 	view.selectionStart, view.selectionSize = begin, size
@@ -117,6 +138,11 @@ func (view *ViewState) Selection() (begin, size int64) {
 func (st *ViewState) inSelection(addr int64) bool {
 	off, size := st.Selection()
 	return addr >= off && addr < off+size
+}
+
+func (st *ViewState) ScrollTo(addr int64) {
+	st.shouldScroll = true
+	st.scrollToAddr = addr
 }
 
 /* some utility functions */

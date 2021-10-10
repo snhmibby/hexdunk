@@ -1,8 +1,5 @@
 package main
 
-//little program to display a file-system tree and basic info
-//once a file-path is selected, print it on stdout
-
 import (
 	"fmt"
 	"io/fs"
@@ -14,13 +11,10 @@ import (
 	I "github.com/AllenDang/imgui-go"
 )
 
-const (
-	timeFmt     = "02 Jan 06 15:04"
-	nodeFlags   = I.TreeNodeFlagsSpanFullWidth | I.TreeNodeFlagsOpenOnArrow | I.TreeNodeFlagsOpenOnDoubleClick
-	leafFlags   = I.TreeNodeFlagsLeaf
-	tableFlags  = I.TableFlags_ScrollX | I.TableFlags_ScrollY | I.TableFlags_Resizable | I.TableFlags_SizingStretchProp
-	selectFlags = I.SelectableFlagsAllowDoubleClick | I.SelectableFlagsSpanAllColumns
-)
+/*
+ * FileDialog:
+ * Used for Open and Save-as dialogs, show a list of the file system and query for a filename
+ */
 
 type fileDialog struct {
 	//imgui/giu and popup related
@@ -36,6 +30,14 @@ type fileDialog struct {
 	currentDir      string //full path of directory selected in dirTree
 	startDir        string //starting directory arg or cwd()
 }
+
+const (
+	timeFmt     = "02 Jan 06 15:04"
+	nodeFlags   = I.TreeNodeFlagsSpanFullWidth | I.TreeNodeFlagsOpenOnArrow | I.TreeNodeFlagsOpenOnDoubleClick
+	leafFlags   = I.TreeNodeFlagsLeaf
+	tableFlags  = I.TableFlags_ScrollX | I.TableFlags_ScrollY | I.TableFlags_Resizable | I.TableFlags_SizingStretchProp
+	selectFlags = I.SelectableFlagsAllowDoubleClick | I.SelectableFlagsSpanAllColumns
+)
 
 var _ G.Disposable = &fileDialog{}
 

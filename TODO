@@ -1,3 +1,4 @@
+- I'd like to move from giu library to just use imgui-go directly
 - How to make scrollbars in Giu?
   make 2 rectangles on the side, use proper imgui theme (lol)
   have some api using an int64-range

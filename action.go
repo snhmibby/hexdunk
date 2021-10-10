@@ -10,20 +10,28 @@ import (
 	"github.com/snhmibby/filebuf"
 )
 
-func actionRedo() {
+func actionMove(move int64) {
+	tab := ActiveTab()
 	file := ActiveFile()
-	if file == nil {
+	if tab == nil || file == nil {
 		return
 	}
-	file.Redo()
+	tab.setCursor(tab.view.cursor + move)
+	tab.view.SetSelection(0, 0)
+}
+
+func actionRedo() {
+	file := ActiveFile()
+	if file != nil {
+		file.Redo()
+	}
 }
 
 func actionUndo() {
 	file := ActiveFile()
-	if file == nil {
-		return
+	if file != nil {
+		file.Undo()
 	}
-	file.Undo()
 }
 
 func actionInsert(b byte) {
@@ -34,16 +42,16 @@ func actionInsert(b byte) {
 	}
 	off := tab.view.cursor
 	file.buf.Insert1(off, b)
-	tab.view.cursor++
+	tab.setCursor(off + 1)
 	file.emptyRedo()
 	file.addUndo(Undo{
 		undo: func() {
 			file.Cut(off, 1)
-			tab.view.cursor = off
+			tab.setCursor(off)
 		},
 		redo: func() {
 			file.buf.Insert1(off, b)
-			tab.view.cursor = off
+			tab.setCursor(off)
 		},
 	})
 }
@@ -67,19 +75,19 @@ func actionOverWrite(b byte) {
 	overwritten := overwritten_[0]
 	file.buf.Remove(off, 1)
 	file.buf.Insert1(off, b)
-	tab.view.cursor++
+	tab.setCursor(off + 1)
 
 	file.emptyRedo()
 	file.addUndo(Undo{
 		undo: func() {
 			file.buf.Remove(off, 1)
 			file.buf.Insert1(off, overwritten)
-			tab.view.cursor = off
+			tab.setCursor(off)
 		},
 		redo: func() {
 			file.buf.Remove(off, 1)
 			file.buf.Insert1(off, b)
-			tab.view.cursor = off + 1
+			tab.setCursor(off + 1)
 		},
 	})
 }
@@ -91,24 +99,26 @@ func actionCut() {
 		return
 	}
 	off, size := tab.view.Selection()
-	cut, err := file.Cut(off, size)
+	cut, err := file.Cut(off, size) //XXX BUG this possibly creates hidden filetree copies (need to find them on saving!)
 	if err != nil {
 		ErrorDialog(fmt.Sprintf("Error in action: Cut(%d, %d)", off, size), fmt.Sprint(err))
 		return
 	}
 
 	HD.ClipBoard = cut
-	tab.view.cursor = off
-	tab.view.SetSelection(off, 0)
+	tab.setCursor(off)
+	tab.view.SetSelection(0, 0)
 	file.emptyRedo()
 	file.addUndo(Undo{
 		undo: func() {
 			file.buf.Paste(off, cut)
-			tab.view.cursor = off
+			tab.setCursor(off)
+			tab.view.SetSelection(off, cut.Size())
 		},
 		redo: func() {
 			file.buf.Cut(off, size)
-			tab.view.cursor = off
+			tab.setCursor(off)
+			tab.view.SetSelection(0, 0)
 		},
 	})
 }
@@ -125,7 +135,7 @@ func actionCopy() {
 		ErrorDialog(fmt.Sprintf("Error in action: Copy(%d, %d)", off, size), fmt.Sprint(err))
 	}
 	HD.ClipBoard = cpy
-	tab.view.cursor = off
+	tab.setCursor(off)
 	tab.view.SetSelection(off, 0)
 }
 
@@ -137,18 +147,21 @@ func actionPaste() {
 		return
 	}
 	off := tab.view.cursor
-	buf := HD.ClipBoard //XXX this creates hidden copies of a file-based tree
+	buf := HD.ClipBoard //XXX BUG this creates hidden copies of a file-based tree
 	file.Paste(off, buf)
+	tab.view.SetSelection(off, buf.Size())
 
 	file.emptyRedo()
 	file.addUndo(Undo{
 		undo: func() {
 			file.buf.Cut(off, buf.Size())
-			tab.view.cursor = off
+			tab.setCursor(off)
+			tab.view.SetSelection(0, 0)
 		},
 		redo: func() {
 			file.buf.Paste(off, buf)
-			tab.view.cursor = off
+			tab.setCursor(off)
+			tab.view.SetSelection(off, buf.Size())
 		},
 	})
 }

@@ -37,9 +37,6 @@ type HexViewWidget struct {
 	id     string
 	buffer *B.Buffer
 
-	topAddr         int64
-	bytesPerLine    int64
-	linesPerScreen  int64
 	width           float32
 	height          float32
 	charWidth       float32
@@ -65,7 +62,7 @@ func bytesPerLine(width, charwidth float32) int {
 	return maxChars
 }
 
-func (h *HexViewWidget) calcSizes() {
+func (h *HexViewWidget) update() {
 	h.width, h.height = G.GetAvailableRegion()
 	sz := I.CalcTextSize("F", true, 0)
 	h.charWidth, h.charHeight = sz.X, sz.Y
@@ -74,15 +71,20 @@ func (h *HexViewWidget) calcSizes() {
 	nDigits := numHexDigits(size)
 	h.addressBarWidth, _ = G.CalcTextSize(addrLabel(size, nDigits))
 
-	h.bytesPerLine = int64(bytesPerLine(h.width-h.addressBarWidth, h.charWidth))
-	h.linesPerScreen = int64(h.height / h.charHeight)
+	h.state.bytesPerLine = int64(bytesPerLine(h.width-h.addressBarWidth, h.charWidth))
+	h.state.linesPerScreen = int64(h.height / h.charHeight)
 
-	h.topAddr = int64(I.ScrollY()/h.charHeight) * h.bytesPerLine
+	h.state.topAddr = int64(I.ScrollY()/h.charHeight) * h.state.bytesPerLine
+
+	if h.state.shouldScroll {
+		h.ScrollTo(h.state.scrollToAddr)
+		h.state.shouldScroll = false
+	}
 }
 
 func (h *HexViewWidget) onScreen(addr int64) bool {
-	top := h.topAddr
-	fin := top + h.bytesPerLine*h.linesPerScreen
+	top := h.state.topAddr
+	fin := top + h.state.bytesPerLine*h.state.linesPerScreen
 	return addr >= top && addr < fin
 }
 
@@ -101,14 +103,14 @@ func (h *HexViewWidget) selectMinimal1(f func()) func() {
 func (h *HexViewWidget) handleKeys() {
 	keymap := map[G.Key]func(){
 		//movement
-		G.KeyDown:  h.MoveDown,
-		G.KeyJ:     h.MoveDown,
-		G.KeyUp:    h.MoveUp,
-		G.KeyK:     h.MoveUp,
-		G.KeyLeft:  h.MoveLeft,
-		G.KeyH:     h.MoveLeft,
-		G.KeyRight: h.MoveRight,
-		G.KeyL:     h.MoveRight,
+		G.KeyDown:  func() { actionMove(-h.state.bytesPerLine) },
+		G.KeyJ:     func() { actionMove(-h.state.bytesPerLine) },
+		G.KeyUp:    func() { actionMove(+h.state.bytesPerLine) },
+		G.KeyK:     func() { actionMove(+h.state.bytesPerLine) },
+		G.KeyLeft:  func() { actionMove(-1) },
+		G.KeyH:     func() { actionMove(-1) },
+		G.KeyRight: func() { actionMove(+1) },
+		G.KeyL:     func() { actionMove(+1) },
 
 		//edit
 		G.KeyX: h.selectMinimal1(actionCut),
@@ -322,15 +324,15 @@ func (h *HexViewWidget) printWidget() {
 	I.PushStyleVarVec2(I.StyleVarCellPadding, I.Vec2{})
 	defer I.PopStyleVarV(3)
 
-	h.calcSizes()
+	h.update()
 	h.handleKeys() //XXX this should be somewhere else??
 
 	flags := I.TableFlags_BordersOuter | I.TableFlags_SizingFixedFit
 	if I.BeginTable("HexDumpTable", 3, flags, I.Vec2{}, 0) {
 		defer I.EndTable()
 		I.TableSetupColumn("Offset", 0, h.addressBarWidth, 0)
-		I.TableSetupColumn("HexDump", 0, 3*h.charWidth*float32(h.bytesPerLine), 0)
-		I.TableSetupColumn("Readable", 0, float32(h.bytesPerLine)*h.charWidth, 0)
+		I.TableSetupColumn("HexDump", 0, 3*h.charWidth*float32(h.state.bytesPerLine), 0)
+		I.TableSetupColumn("Readable", 0, float32(h.state.bytesPerLine)*h.charWidth, 0)
 
 		//XXX this is simple solution, it was a bit difficult to put the logic for 3 different edit modes
 		//into 1 dump function and to take care of only printing 1 edit-input per window,
@@ -354,9 +356,9 @@ func (h *HexViewWidget) printWidget() {
 
 func (h *HexViewWidget) printInsertDump() {
 	//print the hex dump using a listclipper
-	numLines := (h.buffer.Size() + h.bytesPerLine - 1) / h.bytesPerLine
-	lineBuffer := make([]byte, int(h.bytesPerLine)) //buffer to read the bytes for 1 line
-	maxAddr := numHexDigits(h.buffer.Size())        //saved for printing address
+	numLines := (h.buffer.Size() + h.state.bytesPerLine - 1) / h.state.bytesPerLine
+	lineBuffer := make([]byte, int(h.state.bytesPerLine)) //buffer to read the bytes for 1 line
+	maxAddr := numHexDigits(h.buffer.Size())              //saved for printing address
 
 	var seenCursor = false //the input-handling means
 	var clip I.ListClipper
@@ -366,7 +368,7 @@ func (h *HexViewWidget) printInsertDump() {
 	defer clip.End()
 	for clip.Step() {
 		for lnum := clip.DisplayStart; lnum < clip.DisplayEnd; lnum++ {
-			offs := int64(lnum) * h.bytesPerLine
+			offs := int64(lnum) * h.state.bytesPerLine
 			if offs > h.buffer.Size() {
 				break
 			}
@@ -404,7 +406,7 @@ func (h *HexViewWidget) printInsertDump() {
 			}
 
 			//allow to select EOF
-			if n != int(h.bytesPerLine) {
+			if n != int(h.state.bytesPerLine) {
 				if n != 0 {
 					I.SameLine()
 				}
@@ -444,9 +446,9 @@ func (h *HexViewWidget) printInsertDump() {
 
 func (h *HexViewWidget) printOverWriteDump() {
 	//print the hex dump using a listclipper
-	numLines := (h.buffer.Size() + h.bytesPerLine - 1) / h.bytesPerLine
-	lineBuffer := make([]byte, int(h.bytesPerLine)) //buffer to read the bytes for 1 line
-	maxAddr := numHexDigits(h.buffer.Size())        //saved for printing address
+	numLines := (h.buffer.Size() + h.state.bytesPerLine - 1) / h.state.bytesPerLine
+	lineBuffer := make([]byte, int(h.state.bytesPerLine)) //buffer to read the bytes for 1 line
+	maxAddr := numHexDigits(h.buffer.Size())              //saved for printing address
 
 	var seenCursor = false //the input-handling means
 	var clip I.ListClipper
@@ -456,7 +458,7 @@ func (h *HexViewWidget) printOverWriteDump() {
 	defer clip.End()
 	for clip.Step() {
 		for lnum := clip.DisplayStart; lnum < clip.DisplayEnd; lnum++ {
-			offs := int64(lnum) * h.bytesPerLine
+			offs := int64(lnum) * h.state.bytesPerLine
 			if offs > h.buffer.Size() {
 				break
 			}
@@ -487,7 +489,7 @@ func (h *HexViewWidget) printOverWriteDump() {
 				}
 			}
 			//allow to select EOF
-			if n != int(h.bytesPerLine) {
+			if n != int(h.state.bytesPerLine) {
 				if n != 0 {
 					I.SameLine()
 				}
@@ -514,9 +516,9 @@ func (h *HexViewWidget) printOverWriteDump() {
 
 func (h *HexViewWidget) printNormalDump() {
 	//print the hex dump using a listclipper
-	numLines := (h.buffer.Size() + h.bytesPerLine - 1) / h.bytesPerLine
-	lineBuffer := make([]byte, int(h.bytesPerLine)) //buffer to read the bytes for 1 line
-	maxAddr := numHexDigits(h.buffer.Size())        //saved for printing address
+	numLines := (h.buffer.Size() + h.state.bytesPerLine - 1) / h.state.bytesPerLine
+	lineBuffer := make([]byte, int(h.state.bytesPerLine)) //buffer to read the bytes for 1 line
+	maxAddr := numHexDigits(h.buffer.Size())              //saved for printing address
 
 	var clip I.ListClipper
 	//dumb hack: do numlines + 10 because on big files, the last few lines get chopped off
@@ -525,7 +527,7 @@ func (h *HexViewWidget) printNormalDump() {
 	defer clip.End()
 	for clip.Step() {
 		for lnum := clip.DisplayStart; lnum < clip.DisplayEnd; lnum++ {
-			offs := int64(lnum) * h.bytesPerLine
+			offs := int64(lnum) * h.state.bytesPerLine
 			if offs > h.buffer.Size() {
 				break
 			}
@@ -552,7 +554,7 @@ func (h *HexViewWidget) printNormalDump() {
 			}
 
 			//allow to select EOF
-			if n != int(h.bytesPerLine) {
+			if n != int(h.state.bytesPerLine) {
 				if n != 0 {
 					I.SameLine()
 				}
@@ -572,59 +574,29 @@ func (h *HexViewWidget) printNormalDump() {
 	}
 }
 
-func (h *HexViewWidget) clampAddr(a *int64) {
-	//allow EOF
-	switch {
-	case *a < 0:
-		*a = 0
-	case *a >= h.buffer.Size():
-		*a = h.buffer.Size()
-	}
-}
-
-func (h *HexViewWidget) MoveRight() {
-	h.state.cursor += 1
-	h.finishMove()
-}
-
-func (h *HexViewWidget) MoveLeft() {
-	h.state.cursor -= 1
-	h.finishMove()
-}
-
-func (h *HexViewWidget) MoveDown() {
-	h.state.cursor += h.bytesPerLine
-	h.finishMove()
-}
-
-func (h *HexViewWidget) MoveUp() {
-	h.state.cursor -= h.bytesPerLine
-	h.finishMove()
-}
-
-func (h *HexViewWidget) finishMove() {
-	h.state.selectionStart = 0
-	h.state.selectionSize = 0
-	h.clampAddr(&h.state.cursor)
-	h.ScrollTo(h.state.cursor)
-}
-
 func (h *HexViewWidget) ScrollTo(addr int64) {
-	bpl := h.bytesPerLine
-	top := h.topAddr
+	bpl := h.state.bytesPerLine
+	top := h.state.topAddr
 	switch {
 	case h.state.cursor < top:
 		//scroll up, addr should be in the first line
 		//make first line the one that contains addr
 		top = (h.state.cursor / bpl) * bpl
 
-	case h.state.cursor > top+bpl*h.linesPerScreen:
+	case h.state.cursor > top+bpl*h.state.linesPerScreen:
 		//scroll down, addr should be in the last line
-		a := h.state.cursor - h.linesPerScreen*bpl
+		a := h.state.cursor - h.state.linesPerScreen*bpl
 		top = ((a + bpl - 1) / bpl) * bpl
 	default:
 		//addr is already on screen
 	}
-	h.clampAddr(&top)
-	I.SetScrollY(float32(top/bpl) * h.charHeight)
+	/* clamp address */
+	if top < 0 {
+		top = 0
+	}
+	if top > h.buffer.Size() {
+		top = h.buffer.Size()
+	}
+	I.SetScrollY(float32(float64(top/bpl) * float64(h.charHeight)))
+	h.state.topAddr = top
 }
