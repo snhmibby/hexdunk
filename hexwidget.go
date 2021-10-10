@@ -116,8 +116,8 @@ func (h *HexViewWidget) handleKeys() {
 		G.KeyX: h.selectMinimal1(actionCut),
 		G.KeyY: h.selectMinimal1(actionCopy),
 		G.KeyP: actionPaste,
-		G.KeyI: func() { h.state.editmode = InsertMode },
-		G.KeyO: func() { h.state.editmode = OverwriteMode },
+		G.KeyI: func() { h.state.SetSelection(0, 0); h.state.editmode = InsertMode },
+		G.KeyO: func() { h.state.SetSelection(0, 0); h.state.editmode = OverwriteMode },
 		G.KeyU: actionUndo,
 		G.KeyR: actionRedo,
 	}
@@ -420,7 +420,7 @@ func (h *HexViewWidget) printInsertDump() {
 						//just EOF
 						h.BuildHexCell(addr, 0)
 					} else {
-						h.BuildHexCell(addr-1, lineBuffer[n-1])
+						h.BuildHexCell(addr, lineBuffer[n-1])
 					}
 				}
 			}

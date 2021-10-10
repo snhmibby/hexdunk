@@ -22,7 +22,7 @@ const (
 //portion of the saved file should be removed through all buffers throughout
 //the program on a save.)
 type Undo struct {
-	undo, redo func()
+	undo, redo func() (int64, int64) //return affected region
 }
 
 //an opened file

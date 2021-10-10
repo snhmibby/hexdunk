@@ -42,16 +42,21 @@ func actionInsert(b byte) {
 	}
 	off := tab.view.cursor
 	file.buf.Insert1(off, b)
+	tab.view.SetSelection(0, 0)
 	tab.setCursor(off + 1)
 	file.emptyRedo()
 	file.addUndo(Undo{
-		undo: func() {
+		undo: func() (int64, int64) {
 			file.Cut(off, 1)
-			tab.setCursor(off)
+			return off, 0
+			//tab.setCursor(off)
+			//tab.view.SetSelection(0, 0)
 		},
-		redo: func() {
+		redo: func() (int64, int64) {
 			file.buf.Insert1(off, b)
-			tab.setCursor(off)
+			return off, 0
+			//tab.setCursor(off)
+			//tab.view.SetSelection(0, 0)
 		},
 	})
 }
@@ -76,18 +81,19 @@ func actionOverWrite(b byte) {
 	file.buf.Remove(off, 1)
 	file.buf.Insert1(off, b)
 	tab.setCursor(off + 1)
+	tab.view.SetSelection(0, 0)
 
 	file.emptyRedo()
 	file.addUndo(Undo{
-		undo: func() {
+		undo: func() (int64, int64) {
 			file.buf.Remove(off, 1)
 			file.buf.Insert1(off, overwritten)
-			tab.setCursor(off)
+			return off, 0
 		},
-		redo: func() {
+		redo: func() (int64, int64) {
 			file.buf.Remove(off, 1)
 			file.buf.Insert1(off, b)
-			tab.setCursor(off + 1)
+			return off + 1, 0
 		},
 	})
 }
@@ -110,15 +116,13 @@ func actionCut() {
 	tab.view.SetSelection(0, 0)
 	file.emptyRedo()
 	file.addUndo(Undo{
-		undo: func() {
+		undo: func() (int64, int64) {
 			file.buf.Paste(off, cut)
-			tab.setCursor(off)
-			tab.view.SetSelection(off, cut.Size())
+			return off, cut.Size()
 		},
-		redo: func() {
+		redo: func() (int64, int64) {
 			file.buf.Cut(off, size)
-			tab.setCursor(off)
-			tab.view.SetSelection(0, 0)
+			return off, 0
 		},
 	})
 }
@@ -153,15 +157,13 @@ func actionPaste() {
 
 	file.emptyRedo()
 	file.addUndo(Undo{
-		undo: func() {
+		undo: func() (int64, int64) {
 			file.buf.Cut(off, buf.Size())
-			tab.setCursor(off)
-			tab.view.SetSelection(0, 0)
+			return off, 0
 		},
-		redo: func() {
+		redo: func() (int64, int64) {
 			file.buf.Paste(off, buf)
-			tab.setCursor(off)
-			tab.view.SetSelection(off, buf.Size())
+			return off, buf.Size()
 		},
 	})
 }
@@ -178,7 +180,7 @@ func actionNewFile() {
 }
 
 //callbacks for dialogs are set in the draw() layout function
-func dialogOpenCB(p string) {
+func actionOpen(p string) {
 	_, err := OpenHexFile(p)
 	if err != nil {
 		title := fmt.Sprintf("Opening File <%s>", p)
@@ -191,7 +193,7 @@ func actionOpenFile() {
 	OpenFileDialog(DialogOpen)
 }
 
-func dialogSaveAsCB(p string) {
+func actionWriteFile(p string) {
 	hf := ActiveFile()
 	f, err := os.CreateTemp("", "")
 	if err != nil {
@@ -242,6 +244,10 @@ func dialogSaveAsCB(p string) {
 
 func actionSaveFile() {
 	if ActiveFile() != nil {
+		//TODO:
+		//if not is tmp/new file {
+		//   save to real file name
+		//else use save-as dialog
 		OpenFileDialog(DialogSaveAs)
 	}
 }

@@ -26,8 +26,12 @@ func (hf *HexFile) Redo() {
 	}
 	f := hf.redo[sz-1]
 	hf.redo = hf.redo[:sz-1]
-	f.redo()
+	off, size := f.redo()
 	hf.addUndo(f)
+	if tab := ActiveTab(); tab != nil && tab.name == hf.name {
+		tab.setCursor(off)
+		tab.view.SetSelection(off, size)
+	}
 
 }
 
@@ -38,8 +42,12 @@ func (hf *HexFile) Undo() {
 	}
 	f := hf.undo[sz-1]
 	hf.undo = hf.undo[:sz-1]
-	f.undo()
+	off, size := f.undo()
 	hf.addRedo(f)
+	if tab := ActiveTab(); tab != nil && tab.name == hf.name {
+		tab.setCursor(off)
+		tab.view.SetSelection(off, size)
+	}
 }
 
 func OpenHexFile(path string) (*HexFile, error) {

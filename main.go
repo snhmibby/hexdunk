@@ -6,11 +6,14 @@ import (
 )
 
 func draw() {
-	G.SingleWindowWithMenuBar().Layout(
+	G.MainMenuBar().Layout(mkMenu()).Build()
+
+	//G.SingleWindowWithMenuBar().Layout(
+	G.Window("Views").Pos(5, 30).Size(600, 600).Layout(
 		G.PrepareMsgbox(),
-		PrepareFileDialog(DialogOpen, dialogOpenCB),
-		PrepareFileDialog(DialogSaveAs, dialogSaveAsCB),
-		mkMenu(),
+		PrepareFileDialog(DialogOpen, actionOpen),
+		PrepareFileDialog(DialogSaveAs, actionWriteFile),
+		//G.MenuBar().Layout(mkMenu()),
 		//makeToolBar(),
 		mkTabWidget(),
 	)
