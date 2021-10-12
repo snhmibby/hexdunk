@@ -12,9 +12,8 @@ import (
 
 func actionMove(move int64) {
 	tab := ActiveTab()
-	file := ActiveFile()
-	if tab == nil || file == nil {
-		return
+	if tab == nil {
+		panic("Move: tab or file is nil (shouldn't happen)")
 	}
 	tab.setCursor(tab.view.cursor + move)
 	tab.view.SetSelection(0, 0)
@@ -22,14 +21,18 @@ func actionMove(move int64) {
 
 func actionRedo() {
 	file := ActiveFile()
-	if file != nil {
+	if file == nil {
+		panic("Redo: file is nil (shouldn't happen)")
+	} else {
 		file.Redo()
 	}
 }
 
 func actionUndo() {
 	file := ActiveFile()
-	if file != nil {
+	if file == nil {
+		panic("Undo: file is nil (shouldn't happen)")
+	} else {
 		file.Undo()
 	}
 }
@@ -38,7 +41,7 @@ func actionInsert(b byte) {
 	tab := ActiveTab()
 	file := ActiveFile()
 	if tab == nil || file == nil {
-		return
+		panic("Insert: tab or file is nil (shouldn't happen)")
 	}
 	off := tab.view.cursor
 	file.buf.Insert1(off, b)
@@ -61,17 +64,15 @@ func actionOverWrite(b byte) {
 	tab := ActiveTab()
 	file := ActiveFile()
 	if tab == nil || file == nil {
-		return
+		panic("Overwrite: tab or file is nil (shouldn't happen)")
 	}
 	off := tab.view.cursor
-	_, err := file.buf.Seek(off, io.SeekStart)
-	if err != nil {
-		return //TODO this is not error 'handling'
-	}
+	file.buf.Seek(off, io.SeekStart)
 	var overwritten_ = make([]byte, 1)
-	_, err = file.buf.Read(overwritten_)
+	_, err := file.buf.Read(overwritten_)
 	if err != nil {
-		return //TODO: as above
+		ErrorDialog("Overwrite", fmt.Sprintf("Couldn't read from buffer: %v.", err))
+		return
 	}
 	overwritten := overwritten_[0]
 	file.buf.Remove(off, 1)
@@ -98,12 +99,12 @@ func actionCut() {
 	tab := ActiveTab()
 	file := ActiveFile()
 	if tab == nil || file == nil {
-		return
+		panic("Cut: tab or file is nil (shouldn't happen)")
 	}
 	off, size := tab.view.Selection()
 	cut, err := file.Cut(off, size) //XXX BUG this possibly creates hidden filetree copies (need to find them on saving!)
 	if err != nil {
-		ErrorDialog(fmt.Sprintf("Error in action: Cut(%d, %d)", off, size), fmt.Sprint(err))
+		ErrorDialog(fmt.Sprintf("Cut(%d, %d)", off, size), fmt.Sprint(err))
 		return
 	}
 
@@ -127,12 +128,12 @@ func actionCopy() {
 	file := ActiveFile()
 	tab := ActiveTab()
 	if tab == nil || file == nil {
-		return
+		panic("Copy: tab or file is nil (shouldn't happen)")
 	}
 	off, size := tab.view.Selection()
 	cpy, err := file.Copy(off, size)
 	if err != nil {
-		ErrorDialog(fmt.Sprintf("Error in action: Copy(%d, %d)", off, size), fmt.Sprint(err))
+		ErrorDialog(fmt.Sprintf("Copy(%d, %d)", off, size), fmt.Sprint(err))
 	}
 	HD.ClipBoard = cpy
 	tab.setCursor(off)
@@ -141,10 +142,14 @@ func actionCopy() {
 
 //paste in front cursor
 func actionPaste() {
+	if HD.ClipBoard == nil {
+		return //nothing to Paste
+	}
+
 	file := ActiveFile()
 	tab := ActiveTab()
-	if HD.ClipBoard == nil || file == nil || tab == nil {
-		return
+	if file == nil || tab == nil {
+		panic("Paste: tab or file is nil (shouldn't happen)")
 	}
 	off := tab.view.cursor
 	buf := HD.ClipBoard //XXX BUG this creates hidden copies of a file-based tree
@@ -167,11 +172,11 @@ func actionPaste() {
 func actionNewFile() {
 	tmpPath, err := os.CreateTemp("", "NewFile*")
 	if err != nil {
-		ErrorDialog("NewFile", "Cannot create tmp file")
+		ErrorDialog("NewFile", fmt.Sprintf("Cannot create tmp file: %v", err))
 	}
 	_, err = OpenHexFile(tmpPath.Name())
 	if err != nil {
-		ErrorDialog("NewFile", fmt.Sprintf("Couldn't open new tempfile %s", tmpPath.Name()))
+		ErrorDialog("NewFile", fmt.Sprintf("Couldn't open %s: %v", tmpPath.Name(), err))
 	}
 }
 
