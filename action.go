@@ -49,14 +49,10 @@ func actionInsert(b byte) {
 		undo: func() (int64, int64) {
 			file.Cut(off, 1)
 			return off, 0
-			//tab.setCursor(off)
-			//tab.view.SetSelection(0, 0)
 		},
 		redo: func() (int64, int64) {
 			file.buf.Insert1(off, b)
 			return off, 0
-			//tab.setCursor(off)
-			//tab.view.SetSelection(0, 0)
 		},
 	})
 }
