@@ -13,13 +13,14 @@ const (
 	ProgramName = "HexDunk"
 
 	//dialog ids
-	DialogOpen   = "Open"
-	DialogSaveAs = "Save As"
+	DialogOpen   = "Open"         //fileDialog, callback: actionOpen
+	DialogSaveAs = "Save As"      //fileDialog, callback: actionWriteFile
+	DialogGoto   = "Goto Address" //intDialog,  callback: actionGotoAddr
 )
 
-//probably should not be an opaque buffer, but a struct with an action-enum.
+//should not be an opaque buffer, but a struct with an action-enum.
 //that way, we can adjust copy-buffers when a file gets saved (i.e. referenced
-//portion of the saved file should be removed through all buffers throughout
+//portions of the to-be-saved file should be removed through all buffers throughout
 //the program on a save.)
 type Undo struct {
 	undo, redo func() (int64, int64) //return affected region

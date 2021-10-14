@@ -13,6 +13,7 @@ func draw() {
 		G.PrepareMsgbox(),
 		PrepareFileDialog(DialogOpen, actionOpen),
 		PrepareFileDialog(DialogSaveAs, actionWriteFile),
+		PrepareIntDialog(DialogGoto, actionGotoAddr),
 		//G.MenuBar().Layout(mkMenu()),
 		//makeToolBar(),
 		mkTabWidget(),

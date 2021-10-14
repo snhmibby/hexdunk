@@ -111,6 +111,7 @@ func (h *HexViewWidget) handleKeys() {
 		G.KeyH:     func() { actionMove(-1) },
 		G.KeyRight: func() { actionMove(+1) },
 		G.KeyL:     func() { actionMove(+1) },
+		G.KeyG:     actionGoto,
 
 		//edit
 		G.KeyX: h.selectMinimal1(actionCut),
@@ -122,7 +123,7 @@ func (h *HexViewWidget) handleKeys() {
 		G.KeyR: actionRedo,
 	}
 	//other modes are handled by the edit-input-widget in the hex dump
-	if h.state.editmode == NormalMode {
+	if h.state.editmode == NormalMode && G.IsWindowFocused(G.FocusedFlagsNone) {
 		for k, f := range keymap {
 			if G.IsKeyPressed(k) {
 				f()

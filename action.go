@@ -10,6 +10,18 @@ import (
 	"github.com/snhmibby/filebuf"
 )
 
+func actionGoto() {
+	IntDialog(DialogGoto)
+}
+
+func actionGotoAddr(addr int64) {
+	tab := ActiveTab()
+	if tab == nil {
+		panic("Goto: tab or file is nil (shouldn't happen)")
+	}
+	tab.setCursor(addr)
+}
+
 func actionMove(move int64) {
 	tab := ActiveTab()
 	if tab == nil {
@@ -191,7 +203,7 @@ func actionOpen(p string) {
 }
 
 func actionOpenFile() {
-	OpenFileDialog(DialogOpen)
+	FileDialog(DialogOpen)
 }
 
 func actionWriteFile(p string) {
@@ -249,13 +261,13 @@ func actionSaveFile() {
 		//if not is tmp/new file {
 		//   save to real file name
 		//else use save-as dialog
-		OpenFileDialog(DialogSaveAs)
+		FileDialog(DialogSaveAs)
 	}
 }
 
 func actionSaveAs() {
 	if ActiveFile() != nil {
-		OpenFileDialog(DialogSaveAs)
+		FileDialog(DialogSaveAs)
 	}
 }
 

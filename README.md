@@ -9,8 +9,9 @@ A basic gui hex-editor with vi bindings.
 - Fully written in Go.
 
 It uses the packages:
+- "giu" (https://github.com/AllenDang/giu) as a wrapper for imgui, the graphic libary.
 - "filebuf" (https://github.com/snhmibby/filebuf) for fast file loading and editing.
-- "filetree" (https://github.com/snhmibby/filetree) for an imgui file-system dialog..
+- "filetree" (https://github.com/snhmibby/filetree) for an imgui file-system dialog.
 
 ## Manual
 The following operations are supported in the hex-window:

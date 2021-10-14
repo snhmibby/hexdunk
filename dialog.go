@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	G "github.com/AllenDang/giu"
@@ -241,33 +242,7 @@ func (fd *fileDialog) mkNavBar() {
 	G.InputText(&fd.selectedFile).Size(width).Build()
 }
 
-//
-//Public:
-//
-
-func InfoDialog(title, msg string) {
-	G.Msgbox("Info:", title+":\n"+msg).Buttons(G.MsgboxButtonsOk)
-}
-
-func ErrorDialog(title, msg string) {
-	G.Msgbox("ERROR!", "When: "+title+"\n\nError: "+msg).Buttons(G.MsgboxButtonsOk)
-}
-
-func OpenFileDialog(id string) {
-	fdRaw := G.Context.GetState(id)
-	if fdRaw == nil {
-		panic("Couldn't open file dialog " + id)
-	}
-	fd := fdRaw.(*fileDialog)
-	fd.open = true
-	fd.saveState()
-}
-
-func CloseFileDialog(id string) {
-	G.CloseCurrentPopup()
-}
-
-func PrepareFileDialog(id string, cb func(string)) G.Widget {
+func prepareFileDialog(id string, cb func(string)) G.Widget {
 	var fd *fileDialog
 	dialogRaw := G.Context.GetState(id)
 	if dialogRaw == nil {
@@ -317,4 +292,126 @@ func PrepareFileDialog(id string, cb func(string)) G.Widget {
 		).Flags(G.WindowFlagsNone).Build()
 
 	})
+}
+
+/*
+ * int64 dialog
+ */
+type intDialog struct {
+	id       string
+	text     string
+	inputHex bool //either hex or decimal are the only options
+	open     bool
+	finish   func(int64)
+}
+
+func (d *intDialog) Dispose() {}
+
+func (d *intDialog) saveState() {
+	G.Context.SetState(d.id, d)
+}
+
+func (d *intDialog) reset() {
+	d.text = ""
+	d.saveState()
+	G.CloseCurrentPopup()
+}
+
+func (d *intDialog) success() {
+	base := 10
+	if d.inputHex {
+		base = 16
+	}
+	val, err := strconv.ParseInt(d.text, base, 64)
+	if err != nil {
+		ErrorDialog(d.id, err.Error())
+	}
+	d.finish(val)
+	d.reset()
+}
+
+var inputHex bool
+
+func prepareIntDialog(id string, cb func(int64)) G.Widget {
+	var d *intDialog
+	dialogRaw := G.Context.GetState(id)
+	if dialogRaw == nil {
+		d = &intDialog{id: id, finish: cb}
+		d.saveState()
+	} else {
+		d = dialogRaw.(*intDialog)
+	}
+
+	return G.Custom(func() {
+		if d.open {
+			G.OpenPopup(id)
+			d.open = false
+		}
+
+		flags := G.InputTextFlagsEnterReturnsTrue
+		if d.inputHex {
+			flags |= G.InputTextFlagsCharsHexadecimal
+		} else {
+			flags |= G.InputTextFlagsCharsDecimal
+		}
+
+		G.SetNextWindowSizeV(300, 300, G.ConditionOnce)
+		G.Popup(id).Layout(
+			G.Row(
+				G.Label(id),
+				//G.Custom(G.SetKeyboardFocusHere),
+				G.InputText(&d.text).Flags(flags),
+				G.Checkbox("Hex", &d.inputHex),
+				G.Custom(func() {
+					if G.IsKeyPressed(G.KeyEscape) {
+						d.reset()
+					}
+					if G.IsKeyPressed(G.KeyEnter) {
+						d.success()
+					}
+				}),
+			),
+		).Build()
+
+	})
+}
+
+/*
+ *Public:
+ */
+
+func InfoDialog(title, msg string) {
+	G.Msgbox("Info:", title+":\n"+msg).Buttons(G.MsgboxButtonsOk)
+}
+
+func ErrorDialog(title, msg string) {
+	G.Msgbox("ERROR!", "When: "+title+"\n\nError: "+msg).Buttons(G.MsgboxButtonsOk)
+}
+
+func FileDialog(id string) {
+	fdRaw := G.Context.GetState(id)
+	if fdRaw == nil {
+		panic("Couldn't find dialog " + id)
+	}
+	fd := fdRaw.(*fileDialog)
+	fd.open = true
+	fd.saveState()
+}
+
+func PrepareFileDialog(id string, cb func(string)) G.Widget {
+	return prepareFileDialog(id, cb)
+}
+
+func IntDialog(id string) {
+	r := G.Context.GetState(id)
+	if r == nil {
+		panic("Couldn't find dialog " + id)
+	}
+	d := r.(*intDialog)
+	d.open = true
+	G.Context.SetState(id, d)
+}
+
+func PrepareIntDialog(id string, cb func(int64)) G.Widget {
+	return prepareIntDialog(id, cb)
 }
