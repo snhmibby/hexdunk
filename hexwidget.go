@@ -157,9 +157,10 @@ func (h *HexViewWidget) updateSelection(addr int64) {
 			s.selectionSize = addr - s.dragstart + 1
 		}
 	} else {
-		//shift-click: either create a new selection from cursor or update existing one
+		//shift-click
 		off, size := s.Selection()
 		if size == 0 {
+			//new selection from cursor to click addr
 			if addr < s.cursor {
 				s.selectionStart = addr
 				s.selectionSize = s.cursor - addr + 1
@@ -168,6 +169,7 @@ func (h *HexViewWidget) updateSelection(addr int64) {
 				s.selectionSize = addr - s.cursor
 			}
 		} else {
+			//update either the begin or the end of an existing selection with the click addr
 			if addr-off < off+size-addr { //addr is closer to start than end of selection?
 				//shift bottom of selection to include addr
 				s.selectionStart = addr

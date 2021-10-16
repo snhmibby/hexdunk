@@ -228,10 +228,7 @@ func actionWriteFile(p string) {
 	hf.buf.Iter(func(slice []byte) bool {
 		var n int
 		n, err = f.Write(slice)
-		if n != len(slice) || err != nil {
-			return true
-		}
-		return false
+		return n != len(slice) || err != nil
 	})
 	if err != nil {
 		os.Remove(f.Name())
