@@ -18,10 +18,10 @@ const (
 	DialogGoto   = "Goto Address" //intDialog,  callback: actionGotoAddr
 )
 
-//should not be an opaque buffer, but a struct with an action-enum.
+//should not be an opaque closure, but a struct with an action-enum.
 //that way, we can adjust copy-buffers when a file gets saved (i.e. referenced
 //portions of the to-be-saved file should be removed through all buffers throughout
-//the program on a save.)
+//the program on a save, so that they don't 'change' when the file gets written)
 type Undo struct {
 	undo, redo func() (int64, int64) //return affected region
 }

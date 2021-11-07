@@ -9,7 +9,7 @@ func draw() {
 	G.MainMenuBar().Layout(mkMenu()).Build()
 
 	//G.SingleWindowWithMenuBar().Layout(
-	G.Window("Views").Pos(5, 30).Size(600, 600).Layout(
+	G.Window("Files").Pos(5, 30).Size(600, 600).Layout(
 		G.PrepareMsgbox(),
 		PrepareFileDialog(DialogOpen, actionOpen),
 		PrepareFileDialog(DialogSaveAs, actionWriteFile),

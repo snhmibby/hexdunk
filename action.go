@@ -215,15 +215,15 @@ func actionWriteFile(p string) {
 		ErrorDialog(title, msg)
 	}
 	/*
-		hf.buf.Seek(0, io.SeekStart)
-		n, err := io.Copy(f, hf.buf)
-		if err != nil || n != hf.buf.Size() {
-			os.Remove(f.Name())
-			title := fmt.Sprintf("Writing File <%s>", p)
-			msg := fmt.Sprintf("Written %d bytes (expected %d)\nError: %v", n, hf.buf.Size(), err)
-			ErrorDialog(title, msg)
-		}
-	*/
+	 *hf.buf.Seek(0, io.SeekStart)
+	 *n, err := io.Copy(f, hf.buf)
+	 *if err != nil || n != hf.buf.Size() {
+	 *    os.Remove(f.Name())
+	 *    title := fmt.Sprintf("Writing File <%s>", p)
+	 *    msg := fmt.Sprintf("Written %d bytes (expected %d)\nError: %v", n, hf.buf.Size(), err)
+	 *    ErrorDialog(title, msg)
+	 *}
+	 */
 	//use the iter interface
 	hf.buf.Iter(func(slice []byte) bool {
 		var n int
