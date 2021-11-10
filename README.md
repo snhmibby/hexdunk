@@ -23,6 +23,7 @@ The following operations are supported in the hex-window:
 The following keys are bound (vi like)
 - h,j,k,l: move around.
 - arrow keys: move around.
+- g: goto address
 - i: insert mode (insert bytes before the cursor).
 - o: overwrite mode (overwrite bytes).
 - escape: normal mode (move around/editing operations).
