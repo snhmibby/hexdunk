@@ -16,13 +16,10 @@ import (
 const hexwidgetEditPopup = "hexwidget###editPopup"
 
 func numHexDigits(addr int64) int {
-	hexdigits := 0
+	hexdigits := 1
 	for addr > 0 {
 		hexdigits++
 		addr /= 16
-	}
-	if hexdigits == 0 {
-		return 1
 	}
 	return hexdigits
 }
@@ -62,6 +59,7 @@ func bytesPerLine(width, charwidth float32) int {
 	return maxChars
 }
 
+//update transient state variables and helpers
 func (h *HexViewWidget) update() {
 	h.width, h.height = G.GetAvailableRegion()
 	sz := I.CalcTextSize("F", true, 0)
