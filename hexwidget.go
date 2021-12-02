@@ -102,9 +102,9 @@ func (h *HexViewWidget) handleKeys() {
 	keymap := map[G.Key]func(){
 		//movement
 		G.KeyDown:  func() { actionMove(-h.state.bytesPerLine) },
-		G.KeyJ:     func() { actionMove(-h.state.bytesPerLine) },
+		G.KeyK:     func() { actionMove(-h.state.bytesPerLine) },
 		G.KeyUp:    func() { actionMove(+h.state.bytesPerLine) },
-		G.KeyK:     func() { actionMove(+h.state.bytesPerLine) },
+		G.KeyJ:     func() { actionMove(+h.state.bytesPerLine) },
 		G.KeyLeft:  func() { actionMove(-1) },
 		G.KeyH:     func() { actionMove(-1) },
 		G.KeyRight: func() { actionMove(+1) },
